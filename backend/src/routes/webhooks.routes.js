@@ -6,24 +6,25 @@ import { Router } from 'express';
 import { verifyPaymeAuth, handlePaymeWebhook } from '../payments/PaymeProvider.js';
 import { handleClickWebhook } from '../payments/ClickProvider.js';
 import { creditWallet } from '../helpers.js';
+import { ah } from '../asyncHandler.js';
 
 const router = Router();
 
-router.post('/payme', (req, res) => {
+router.post('/payme', ah(async (req, res) => {
   if (!verifyPaymeAuth(req)) {
     return res.json({ jsonrpc: '2.0', id: req.body?.id ?? null, error: { code: -32504, message: "Ruxsat yo'q" } });
   }
-  const result = handlePaymeWebhook(req.body, {
+  const result = await handlePaymeWebhook(req.body, {
     onPerform: ({ userId, amount, reference }) => creditWallet(userId, amount, `Payme orqali to'ldirildi (${reference})`),
   });
   res.json(result);
-});
+}));
 
-router.post('/click', (req, res) => {
-  const result = handleClickWebhook(req.body, {
+router.post('/click', ah(async (req, res) => {
+  const result = await handleClickWebhook(req.body, {
     onPerform: ({ userId, amount, reference }) => creditWallet(userId, amount, `Click orqali to'ldirildi (${reference})`),
   });
   res.json(result);
-});
+}));
 
 export default router;

@@ -77,11 +77,32 @@ Maqsad: O'zbek frilanserlar, dropshipperlar va masofadan ishlovchilar xalqaro to
 ## 🛠️ Texnologiyalar / Tech Stack
 
 ```
-Frontend:    HTML, CSS, JavaScript (hozircha)
-Framework:   React (keyinroq)
-AI:          Claude API / OpenAI API
-Hosting:     TBD
+Frontend:    React + Vite (src/)
+Backend:     Node.js + Express + libSQL (backend/)
+To'lovlar:   Payme/Click/Payoneer integratsiyaga tayyor abstraktsiya (backend/src/payments/)
+Hosting:     Frontend — Netlify. Backend — Render (yoki Railway/Fly.io) + Turso (bulut bazasi)
 ```
+
+---
+
+## 🚀 Hosting / Deployment
+
+**Frontend (Netlify):** statik build — `npm run build`, natija `dist/` papkasi. Netlify'da
+`Build command: npm run build`, `Publish directory: dist`. `.env`da `VITE_API_URL`ni
+backend manzilingizga (masalan `https://ravonpay-backend.onrender.com/api/v1`) qo'ying.
+
+**Backend (Render + Turso):** Netlify Functions statik/vaqtinchalik bo'lgani uchun
+backend uchun mos emas (`backend/data/ravonpay.db` doimiy fayl talab qiladi). O'rniga:
+1. [turso.tech](https://turso.tech)da bepul hisob oching, baza yarating (`turso db create ravonpay`)
+2. `turso db show ravonpay --url` va `turso db tokens create ravonpay` orqali
+   `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN` oling
+3. Render'da "New Web Service" → shu repo → Root Directory: `backend` → 
+   Build: `npm install` → Start: `node server.js`
+4. Render'ning Environment bo'limiga `backend/.env.example`dagi barcha qiymatlarni
+   (jumladan `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN`) qo'shing — disk qo'shish shart emas,
+   Render'ning BEPUL tarifida ham ishlayveradi.
+
+To'lov provayderlari (Payme/Click/Payoneer) bilan ishlash bo'yicha — `TOLOV_HAMKORLIKLARI.md` fayliga qarang.
 
 ---
 

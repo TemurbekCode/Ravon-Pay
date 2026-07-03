@@ -56,22 +56,20 @@ export function verifyPaymeAuth(req) {
   return login === 'Paycom' && key === process.env.PAYME_KEY;
 }
 
-// Payme JSON-RPC webhook'ini qayta ishlaydi. `findOrder(orderId)` — order_id
-// bo'yicha { userId, amount } qaytaruvchi funksiya (chaqiruvchi tomonidan
-// beriladi, chunki "order" nima ekanligi kontekstga bog'liq — hozircha wallet
-// to'ldirish uchun ishlatiladi).
-export function handlePaymeWebhook({ method, params, id }, { onPerform }) {
+// Payme JSON-RPC webhook'ini qayta ishlaydi. `onPerform` — to'lov haqiqatan
+// amalga oshgach (PerformTransaction) hamyonni to'ldiradigan callback.
+export async function handlePaymeWebhook({ method, params, id }, { onPerform }) {
   const now = Date.now();
 
   if (method === 'CheckPerformTransaction') {
     const orderId = params?.account?.order_id;
-    const order = db.prepare('SELECT * FROM provider_transactions WHERE order_id = ? AND provider = ?').get(orderId, 'payme');
+    const order = await db.prepare('SELECT * FROM provider_transactions WHERE order_id = ? AND provider = ?').get(orderId, 'payme');
     if (!order && !orderId) return rpcError(id, ERR.ORDER_NOT_FOUND, "Buyurtma topilmadi");
     return rpcResult(id, { allow: true });
   }
 
   if (method === 'CreateTransaction') {
-    const existing = db.prepare('SELECT * FROM provider_transactions WHERE id = ?').get(params.id);
+    const existing = await db.prepare('SELECT * FROM provider_transactions WHERE id = ?').get(params.id);
     if (existing) {
       return rpcResult(id, { create_time: existing.create_time, transaction: existing.id, state: existing.state });
     }
@@ -80,34 +78,34 @@ export function handlePaymeWebhook({ method, params, id }, { onPerform }) {
     // orderId RavonPay tomonida qaysi foydalanuvchiga tegishli ekanligi
     // createTopUpCheckout bosqichida saqlangan bo'lishi kerak (bu yerda
     // soddalik uchun orderId = uid('topup') va oldindan yozib qo'yilgan deb faraz qilinadi).
-    const pending = db.prepare('SELECT user_id FROM provider_transactions WHERE order_id = ? AND provider = ? AND state = 0').get(orderId, 'payme');
+    const pending = await db.prepare('SELECT user_id FROM provider_transactions WHERE order_id = ? AND provider = ? AND state = 0').get(orderId, 'payme');
     if (!pending) return rpcError(id, ERR.ORDER_NOT_FOUND, "Buyurtma topilmadi yoki muddati tugagan");
-    db.prepare('INSERT INTO provider_transactions (id, provider, user_id, order_id, amount, state, create_time) VALUES (?, ?, ?, ?, ?, 1, ?)')
+    await db.prepare('INSERT INTO provider_transactions (id, provider, user_id, order_id, amount, state, create_time) VALUES (?, ?, ?, ?, ?, 1, ?)')
       .run(params.id, 'payme', pending.user_id, orderId, amount, now);
     return rpcResult(id, { create_time: now, transaction: params.id, state: 1 });
   }
 
   if (method === 'PerformTransaction') {
-    const tx = db.prepare('SELECT * FROM provider_transactions WHERE id = ?').get(params.id);
+    const tx = await db.prepare('SELECT * FROM provider_transactions WHERE id = ?').get(params.id);
     if (!tx) return rpcError(id, ERR.TRANSACTION_NOT_FOUND, 'Tranzaksiya topilmadi');
     if (tx.state === 2) return rpcResult(id, { transaction: tx.id, perform_time: tx.perform_time, state: 2 });
     if (tx.state !== 1) return rpcError(id, ERR.CANT_PERFORM, "Tranzaksiyani amalga oshirib bo'lmaydi");
-    db.prepare('UPDATE provider_transactions SET state = 2, perform_time = ? WHERE id = ?').run(now, tx.id);
-    onPerform({ userId: tx.user_id, amount: tx.amount, reference: tx.id });
+    await db.prepare('UPDATE provider_transactions SET state = 2, perform_time = ? WHERE id = ?').run(now, tx.id);
+    await onPerform({ userId: tx.user_id, amount: tx.amount, reference: tx.id });
     return rpcResult(id, { transaction: tx.id, perform_time: now, state: 2 });
   }
 
   if (method === 'CancelTransaction') {
-    const tx = db.prepare('SELECT * FROM provider_transactions WHERE id = ?').get(params.id);
+    const tx = await db.prepare('SELECT * FROM provider_transactions WHERE id = ?').get(params.id);
     if (!tx) return rpcError(id, ERR.TRANSACTION_NOT_FOUND, 'Tranzaksiya topilmadi');
     const newState = tx.state === 2 ? -2 : -1;
-    db.prepare('UPDATE provider_transactions SET state = ?, cancel_time = ?, reason = ? WHERE id = ?')
+    await db.prepare('UPDATE provider_transactions SET state = ?, cancel_time = ?, reason = ? WHERE id = ?')
       .run(newState, now, params.reason || 0, tx.id);
     return rpcResult(id, { transaction: tx.id, cancel_time: now, state: newState });
   }
 
   if (method === 'CheckTransaction') {
-    const tx = db.prepare('SELECT * FROM provider_transactions WHERE id = ?').get(params.id);
+    const tx = await db.prepare('SELECT * FROM provider_transactions WHERE id = ?').get(params.id);
     if (!tx) return rpcError(id, ERR.TRANSACTION_NOT_FOUND, 'Tranzaksiya topilmadi');
     return rpcResult(id, {
       create_time: tx.create_time, perform_time: tx.perform_time, cancel_time: tx.cancel_time,
@@ -116,7 +114,7 @@ export function handlePaymeWebhook({ method, params, id }, { onPerform }) {
   }
 
   if (method === 'GetStatement') {
-    const rows = db.prepare('SELECT * FROM provider_transactions WHERE provider = ? AND create_time BETWEEN ? AND ?')
+    const rows = await db.prepare('SELECT * FROM provider_transactions WHERE provider = ? AND create_time BETWEEN ? AND ?')
       .all('payme', params.from, params.to);
     return rpcResult(id, {
       transactions: rows.map((tx) => ({
@@ -133,7 +131,7 @@ export function handlePaymeWebhook({ method, params, id }, { onPerform }) {
 // TopUp so'ralganda checkout havolasidan OLDIN chaqiriladi — order_id'ni
 // foydalanuvchiga bog'lab, state=0 ("kutilmoqda, hali Payme tomonidan
 // CreateTransaction chaqirilmagan") sifatida oldindan yozib qo'yadi.
-export function reservePaymeOrder({ userId, orderId, amount }) {
-  db.prepare('INSERT INTO provider_transactions (id, provider, user_id, order_id, amount, state, create_time) VALUES (?, ?, ?, ?, ?, 0, ?)')
+export async function reservePaymeOrder({ userId, orderId, amount }) {
+  await db.prepare('INSERT INTO provider_transactions (id, provider, user_id, order_id, amount, state, create_time) VALUES (?, ?, ?, ?, ?, 0, ?)')
     .run(uid('pmord'), 'payme', userId, orderId, amount, Date.now());
 }

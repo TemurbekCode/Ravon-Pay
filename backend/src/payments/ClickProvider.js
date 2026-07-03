@@ -49,7 +49,7 @@ function verifyClickSign(body) {
 }
 
 // Click'dan kelgan Prepare/Complete so'rovini qayta ishlaydi.
-export function handleClickWebhook(body, { onPerform }) {
+export async function handleClickWebhook(body, { onPerform }) {
   if (!verifyClickSign(body)) {
     return { error: CLICK_ERROR.SIGN_FAILED, error_note: "Imzo noto'g'ri" };
   }
@@ -59,10 +59,10 @@ export function handleClickWebhook(body, { onPerform }) {
   const amount = Math.round(Number(body.amount));
 
   if (!isComplete) {
-    const pending = db.prepare('SELECT user_id FROM provider_transactions WHERE order_id = ? AND provider = ? AND state = 0').get(orderId, 'click');
+    const pending = await db.prepare('SELECT user_id FROM provider_transactions WHERE order_id = ? AND provider = ? AND state = 0').get(orderId, 'click');
     if (!pending) return { error: CLICK_ERROR.ORDER_NOT_FOUND, error_note: 'Buyurtma topilmadi' };
     const txId = uid('clord');
-    db.prepare('INSERT INTO provider_transactions (id, provider, user_id, order_id, amount, state, create_time) VALUES (?, ?, ?, ?, ?, 1, ?)')
+    await db.prepare('INSERT INTO provider_transactions (id, provider, user_id, order_id, amount, state, create_time) VALUES (?, ?, ?, ?, ?, 1, ?)')
       .run(String(body.click_trans_id), 'click', pending.user_id, orderId, amount, Date.now());
     return {
       click_trans_id: body.click_trans_id, merchant_trans_id: orderId,
@@ -70,11 +70,11 @@ export function handleClickWebhook(body, { onPerform }) {
     };
   }
 
-  const tx = db.prepare('SELECT * FROM provider_transactions WHERE id = ?').get(String(body.click_trans_id));
+  const tx = await db.prepare('SELECT * FROM provider_transactions WHERE id = ?').get(String(body.click_trans_id));
   if (!tx) return { error: CLICK_ERROR.TRANSACTION_NOT_FOUND, error_note: 'Tranzaksiya topilmadi' };
   if (tx.state === 2) return { error: CLICK_ERROR.ALREADY_PAID, error_note: "Allaqachon to'langan" };
-  db.prepare('UPDATE provider_transactions SET state = 2, perform_time = ? WHERE id = ?').run(Date.now(), tx.id);
-  onPerform({ userId: tx.user_id, amount: tx.amount, reference: tx.id });
+  await db.prepare('UPDATE provider_transactions SET state = 2, perform_time = ? WHERE id = ?').run(Date.now(), tx.id);
+  await onPerform({ userId: tx.user_id, amount: tx.amount, reference: tx.id });
   return {
     click_trans_id: body.click_trans_id, merchant_trans_id: orderId,
     merchant_confirm_id: uid('clconf'), error: CLICK_ERROR.SUCCESS, error_note: 'Success',
@@ -83,7 +83,7 @@ export function handleClickWebhook(body, { onPerform }) {
 
 // TopUp so'ralganda checkout havolasi berilishidan oldin order_id'ni
 // foydalanuvchiga bog'lab qo'yadi (Payme'dagi reservePaymeOrder bilan bir xil g'oya).
-export function reserveClickOrder({ userId, orderId, amount }) {
-  db.prepare('INSERT INTO provider_transactions (id, provider, user_id, order_id, amount, state, create_time) VALUES (?, ?, ?, ?, ?, 0, ?)')
+export async function reserveClickOrder({ userId, orderId, amount }) {
+  await db.prepare('INSERT INTO provider_transactions (id, provider, user_id, order_id, amount, state, create_time) VALUES (?, ?, ?, ?, ?, 0, ?)')
     .run(uid('clres'), 'click', userId, orderId, amount, Date.now());
 }

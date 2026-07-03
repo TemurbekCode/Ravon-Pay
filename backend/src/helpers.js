@@ -40,31 +40,36 @@ export function rowToNotification(r) {
   return { id: r.id, kind: r.kind, title: r.title, body: r.body, date: r.date, read: !!r.read };
 }
 
-export function nextSortOrder(table, userId) {
-  const row = db.prepare(`SELECT COALESCE(MAX(sort_order), -1) AS m FROM ${table} WHERE user_id = ?`).get(userId);
+export async function nextSortOrder(table, userId) {
+  const row = await db.prepare(`SELECT COALESCE(MAX(sort_order), -1) AS m FROM ${table} WHERE user_id = ?`).get(userId);
   return row.m + 1;
 }
 
 // Hamyonga pul qo'shish — hozircha instant (Mock) topup'da, keladigan real
 // Payme/Click webhook'i pulni tasdiqlaganda ham (onPerform) shu funksiya orqali
 // ishlatiladi, shunda ikkala yo'l bir xil yozuv qoldiradi.
-export function creditWallet(userId, amount, label = "Hamyon to'ldirildi") {
-  const w = db.prepare('SELECT balance FROM wallets WHERE user_id = ?').get(userId);
+export async function creditWallet(userId, amount, label = "Hamyon to'ldirildi") {
+  const w = await db.prepare('SELECT balance FROM wallets WHERE user_id = ?').get(userId);
   const newBalance = w.balance + amount;
-  db.prepare('UPDATE wallets SET balance = ? WHERE user_id = ?').run(newBalance, userId);
-  const order = nextSortOrder('wallet_transactions', userId);
-  db.prepare('INSERT INTO wallet_transactions (id, user_id, type, name, date, status, amount, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+  await db.prepare('UPDATE wallets SET balance = ? WHERE user_id = ?').run(newBalance, userId);
+  const order = await nextSortOrder('wallet_transactions', userId);
+  await db.prepare('INSERT INTO wallet_transactions (id, user_id, type, name, date, status, amount, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
     .run(uid('tx'), userId, 'in', label, nowLabel(), 'done', amount, order);
-  addNotification(userId, "Hamyon to'ldirildi", `+${formatCurrency(amount)} so'm hamyoningizga tushdi. Balans: ${formatCurrency(newBalance)} so'm`, 'in');
+  await addNotification(userId, "Hamyon to'ldirildi", `+${formatCurrency(amount)} so'm hamyoningizga tushdi. Balans: ${formatCurrency(newBalance)} so'm`, 'in');
   return newBalance;
 }
 
-export function getWallet(userId) {
-  const w = db.prepare('SELECT balance FROM wallets WHERE user_id = ?').get(userId);
-  const cards = db.prepare('SELECT * FROM cards WHERE user_id = ? ORDER BY sort_order ASC').all(userId).map(rowToCard);
-  const transactions = db.prepare('SELECT * FROM wallet_transactions WHERE user_id = ? ORDER BY sort_order DESC').all(userId).map(rowToWalletTx);
-  const contacts = db.prepare('SELECT * FROM contacts WHERE user_id = ? ORDER BY sort_order ASC').all(userId).map(rowToContact);
-  return { balance: w?.balance ?? 0, cards, transactions, contacts };
+export async function getWallet(userId) {
+  const w = await db.prepare('SELECT balance FROM wallets WHERE user_id = ?').get(userId);
+  const cardRows = await db.prepare('SELECT * FROM cards WHERE user_id = ? ORDER BY sort_order ASC').all(userId);
+  const txRows = await db.prepare('SELECT * FROM wallet_transactions WHERE user_id = ? ORDER BY sort_order DESC').all(userId);
+  const contactRows = await db.prepare('SELECT * FROM contacts WHERE user_id = ? ORDER BY sort_order ASC').all(userId);
+  return {
+    balance: w?.balance ?? 0,
+    cards: cardRows.map(rowToCard),
+    transactions: txRows.map(rowToWalletTx),
+    contacts: contactRows.map(rowToContact),
+  };
 }
 
 // Har oy boshida "baseline" (solishtirish nuqtasi) joriy ko'rsatkichlarga
@@ -72,38 +77,45 @@ export function getWallet(userId) {
 // ko'rsatadi. Bu funksiya har safar biznes ma'lumoti o'qilganda chaqiriladi,
 // shuning uchun alohida cron/schedule kerak emas — oy almashgani birinchi
 // so'rovda avtomatik payqaladi.
-function rolloverMonthlyBaseline(userId) {
-  const b = db.prepare('SELECT revenue, sales_count, avg_order, baseline_month FROM businesses WHERE user_id = ?').get(userId);
+async function rolloverMonthlyBaseline(userId) {
+  const b = await db.prepare('SELECT revenue, sales_count, avg_order, baseline_month FROM businesses WHERE user_id = ?').get(userId);
   const currentMonth = new Date().toISOString().slice(0, 7); // "2026-07"
   if (b.baseline_month === currentMonth) return;
-  db.prepare('UPDATE businesses SET baseline_revenue = ?, baseline_sales_count = ?, baseline_avg_order = ?, baseline_month = ? WHERE user_id = ?')
+  await db.prepare('UPDATE businesses SET baseline_revenue = ?, baseline_sales_count = ?, baseline_avg_order = ?, baseline_month = ? WHERE user_id = ?')
     .run(b.revenue, b.sales_count, b.avg_order, currentMonth, userId);
 }
 
-export function getBusiness(userId) {
-  rolloverMonthlyBaseline(userId);
-  const b = db.prepare('SELECT * FROM businesses WHERE user_id = ?').get(userId);
-  const links = db.prepare('SELECT * FROM biz_links WHERE user_id = ? ORDER BY sort_order DESC').all(userId).map(rowToLink);
-  const invoices = db.prepare('SELECT * FROM biz_invoices WHERE user_id = ? ORDER BY sort_order DESC').all(userId).map(rowToInvoice);
-  const checkoutPages = db.prepare('SELECT * FROM biz_checkout_pages WHERE user_id = ? ORDER BY sort_order DESC').all(userId).map(rowToCheckoutPage);
-  const team = db.prepare('SELECT * FROM biz_team WHERE user_id = ? ORDER BY sort_order ASC').all(userId).map(rowToTeamMember);
-  const customers = db.prepare('SELECT * FROM biz_customers WHERE user_id = ? ORDER BY total DESC').all(userId).map(rowToCustomer);
-  const transactions = db.prepare('SELECT * FROM biz_transactions WHERE user_id = ? ORDER BY sort_order DESC').all(userId).map(rowToBizTx);
-  const payouts = db.prepare('SELECT * FROM biz_payouts WHERE user_id = ? ORDER BY sort_order DESC').all(userId).map(rowToPayout);
+export async function getBusiness(userId) {
+  await rolloverMonthlyBaseline(userId);
+  const b = await db.prepare('SELECT * FROM businesses WHERE user_id = ?').get(userId);
+  const linkRows = await db.prepare('SELECT * FROM biz_links WHERE user_id = ? ORDER BY sort_order DESC').all(userId);
+  const invoiceRows = await db.prepare('SELECT * FROM biz_invoices WHERE user_id = ? ORDER BY sort_order DESC').all(userId);
+  const checkoutRows = await db.prepare('SELECT * FROM biz_checkout_pages WHERE user_id = ? ORDER BY sort_order DESC').all(userId);
+  const teamRows = await db.prepare('SELECT * FROM biz_team WHERE user_id = ? ORDER BY sort_order ASC').all(userId);
+  const customerRows = await db.prepare('SELECT * FROM biz_customers WHERE user_id = ? ORDER BY total DESC').all(userId);
+  const txRows = await db.prepare('SELECT * FROM biz_transactions WHERE user_id = ? ORDER BY sort_order DESC').all(userId);
+  const payoutRows = await db.prepare('SELECT * FROM biz_payouts WHERE user_id = ? ORDER BY sort_order DESC').all(userId);
   return {
     revenue: b.revenue, salesCount: b.sales_count, avgOrder: b.avg_order,
     baseline: { revenue: b.baseline_revenue, salesCount: b.baseline_sales_count, avgOrder: b.baseline_avg_order },
     balance: { available: b.balance_available, pending: b.balance_pending },
-    links, invoices, checkoutPages, team, customers, transactions, payouts,
+    links: linkRows.map(rowToLink),
+    invoices: invoiceRows.map(rowToInvoice),
+    checkoutPages: checkoutRows.map(rowToCheckoutPage),
+    team: teamRows.map(rowToTeamMember),
+    customers: customerRows.map(rowToCustomer),
+    transactions: txRows.map(rowToBizTx),
+    payouts: payoutRows.map(rowToPayout),
   };
 }
 
-export function getNotifications(userId) {
-  return db.prepare('SELECT * FROM notifications WHERE user_id = ? ORDER BY sort_order DESC').all(userId).map(rowToNotification);
+export async function getNotifications(userId) {
+  const rows = await db.prepare('SELECT * FROM notifications WHERE user_id = ? ORDER BY sort_order DESC').all(userId);
+  return rows.map(rowToNotification);
 }
 
-export function addNotification(userId, title, body, kind = 'system') {
-  const order = nextSortOrder('notifications', userId);
-  db.prepare('INSERT INTO notifications (id, user_id, kind, title, body, date, read, sort_order) VALUES (?, ?, ?, ?, ?, ?, 0, ?)')
+export async function addNotification(userId, title, body, kind = 'system') {
+  const order = await nextSortOrder('notifications', userId);
+  await db.prepare('INSERT INTO notifications (id, user_id, kind, title, body, date, read, sort_order) VALUES (?, ?, ?, ?, ?, ?, 0, ?)')
     .run(uid('ntf'), userId, kind, title, body, nowLabel(), order);
 }
