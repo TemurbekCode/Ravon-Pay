@@ -1,0 +1,33 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Backend ma'lumotlar bazasi (foydalanuvchi ma'lumotlari — commit qilinmaydi)
+backend/data/
+
+# Maxfiy kalitlar (JWT_SECRET va h.k.) — hech qachon GitHub'ga chiqmasin.
+# Faqat ".env.example" andozasi commit qilinadi.
+.env
+.env.*
+!.env.example
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

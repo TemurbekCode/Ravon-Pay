@@ -1,0 +1,542 @@
+// ============================================
+// RAVONPAY — AUTH (Login / Register) STILLARI
+// O'ZGARISH: desktopda 50/50 teng bo'linish
+// (ranglar global index.css tokenlaridan keladi)
+// ============================================
+
+.auth {
+  display: grid;
+  grid-template-columns: 1fr;
+  min-height: 100vh;
+
+  // ===== ASOSIY O'ZGARISH: 50/50 TENG =====
+  @media (min-width: 1000px) {
+    grid-template-columns: 1fr 1fr; // chap 50% + o'ng 50%
+  }
+
+  // ===== CHAP BRAND PANEL =====
+  .brand-panel {
+    display: none;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(155deg, #4F46E5 0%, #7C3AED 50%, #4338CA 100%);
+    padding: 56px;
+    flex-direction: column;
+
+    @media (min-width: 1000px) { display: flex; }
+    @media (min-width: 1400px) { padding: 72px; } // katta ekranlarda nafas
+
+    &::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+      background-size: 44px 44px;
+    }
+    &::after {
+      content: '';
+      position: absolute;
+      top: -15%; right: -10%;
+      width: 500px; height: 500px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.16), transparent 65%);
+    }
+    > * { position: relative; z-index: 1; }
+  }
+
+  .bp-logo {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 23px;
+    color: #fff;
+
+    .mark {
+      position: relative;
+      width: 38px; height: 38px;
+      border-radius: 10px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(8px);
+      display: grid;
+      place-items: center;
+      svg { width: 21px; height: 21px; }
+      img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    }
+  }
+
+  .bp-mid {
+    margin-top: auto;
+    max-width: 480px; // matn juda keng cho'zilmasligi uchun
+
+    h2 {
+      font-family: var(--font-display);
+      font-size: clamp(32px, 3vw, 42px);
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      margin-bottom: 18px;
+    }
+    p {
+      font-size: 17px;
+      color: rgba(255, 255, 255, 0.85);
+      max-width: 420px;
+    }
+  }
+
+  .bp-stats {
+    display: flex;
+    gap: 36px;
+    margin-top: auto;
+    padding-top: 48px;
+
+    .bp-stat {
+      .v { font-family: var(--font-display); font-size: 30px; font-weight: 700; color: #fff; }
+      .l { font-size: 13px; color: rgba(255, 255, 255, 0.75); margin-top: 2px; }
+    }
+  }
+
+  .bp-float {
+    position: absolute;
+    background: rgba(255, 255, 255, 0.13);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 16px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    color: #fff;
+    z-index: 2;
+
+    svg { width: 22px; height: 22px; }
+    .ic { width: 34px; height: 34px; border-radius: 9px; background: rgba(255, 255, 255, 0.2); display: grid; place-items: center; }
+    .t { font-size: 13px; font-weight: 600; }
+    .s { font-size: 11px; opacity: 0.8; }
+
+    &.f1 { top: 120px; right: 56px; animation: auth-floaty 5s ease-in-out infinite; }
+    &.f2 { bottom: 220px; right: 90px; animation: auth-floaty 6s ease-in-out infinite 0.8s; }
+  }
+
+  @keyframes auth-floaty {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-12px); }
+  }
+
+  // ===== O'NG FORMA PANEL =====
+  .form-panel {
+    display: flex;
+    flex-direction: column;
+    padding: 28px;
+    position: relative;
+    overflow-y: auto;
+
+    @media (min-width: 600px) { padding: 40px 56px; }
+  }
+
+  .fp-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: auto;
+  }
+
+  .fp-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 20px;
+
+    @media (min-width: 1000px) { display: none; } // desktopda brand panelда logo bor
+
+    .mark {
+      position: relative;
+      width: 32px; height: 32px;
+      border-radius: 9px;
+      overflow: hidden;
+      background: var(--gradient-brand);
+      display: grid;
+      place-items: center;
+      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+      svg { width: 18px; height: 18px; }
+      img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    }
+  }
+
+  .fp-controls { display: flex; gap: 8px; margin-left: auto; }
+
+  .icon-btn {
+    width: 40px; height: 40px;
+    display: grid;
+    place-items: center;
+    border-radius: var(--radius-full);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    transition: all 0.18s var(--ease);
+    &:hover { color: var(--text-primary); background: var(--bg-elevated); }
+    svg { width: 18px; height: 18px; }
+  }
+
+  // Til mini dropdown
+  .lang-mini { position: relative; }
+  .lang-mini-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 40px;
+    padding: 0 13px;
+    border-radius: var(--radius-full);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-size: 13.5px;
+    font-weight: 600;
+    transition: all 0.18s;
+    &:hover { color: var(--text-primary); background: var(--bg-elevated); }
+    .chev { width: 13px; height: 13px; transition: transform 0.2s; }
+  }
+  .lang-mini.open .chev { transform: rotate(180deg); }
+  .lang-mini-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    background: var(--bg-card);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    padding: 6px;
+    min-width: 150px;
+    box-shadow: var(--shadow-pop);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px);
+    transition: all 0.2s var(--ease);
+    z-index: 20;
+
+    button {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 9px 11px;
+      border-radius: 8px;
+      color: var(--text-secondary);
+      font-size: 13.5px;
+      font-weight: 500;
+      transition: all 0.15s;
+      &:hover { background: var(--bg-elevated); color: var(--text-primary); }
+      &.active { color: var(--brand-glow); background: var(--bg-elevated); }
+      .flag { font-size: 16px; }
+    }
+  }
+  .lang-mini.open .lang-mini-menu { opacity: 1; visibility: visible; transform: translateY(0); }
+
+  // Forma tanasi (markazda)
+  .fp-body {
+    width: 100%;
+    max-width: 400px;
+    margin: 40px auto;
+  }
+
+  .fp-head {
+    margin-bottom: 30px;
+    h1 {
+      font-family: var(--font-display);
+      font-size: 29px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+    p { color: var(--text-secondary); font-size: 15px; }
+  }
+
+  // Tabs
+  .tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--bg-elevated);
+    padding: 5px;
+    border-radius: var(--radius-full);
+    margin-bottom: 28px;
+
+    .tab {
+      flex: 1;
+      padding: 11px;
+      border-radius: var(--radius-full);
+      font-size: 14.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-align: center;
+      transition: all 0.2s var(--ease);
+      &.active { background: var(--bg-card); color: var(--text-primary); box-shadow: var(--shadow-card); }
+    }
+    .tab-link { display: flex; align-items: center; justify-content: center; }
+  }
+
+  // Maydonlar
+  .field {
+    margin-bottom: 18px;
+    label { display: block; font-size: 13.5px; font-weight: 600; margin-bottom: 8px; color: var(--text-secondary); }
+  }
+  .input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+
+    > svg.lead {
+      position: absolute;
+      left: 15px;
+      width: 18px; height: 18px;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+    input {
+      width: 100%;
+      padding: 13px 15px 13px 44px;
+      background: var(--input-bg);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-md);
+      color: var(--text-primary);
+      font-size: 14.5px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      &::placeholder { color: var(--text-muted); }
+      &:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12); }
+    }
+    .toggle-pass {
+      position: absolute;
+      right: 13px;
+      width: 34px; height: 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      color: var(--text-muted);
+      transition: color 0.18s;
+      &:hover { color: var(--text-primary); }
+      svg { width: 18px; height: 18px; }
+    }
+    &.phone {
+      .prefix { position: absolute; left: 44px; font-size: 14.5px; color: var(--text-secondary); pointer-events: none; font-weight: 500; }
+      input { padding-left: 84px; }
+    }
+  }
+
+  .field-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 22px;
+  }
+
+  .checkbox {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 13.5px;
+    color: var(--text-secondary);
+    cursor: pointer;
+
+    input { display: none; }
+    .box {
+      width: 19px; height: 19px;
+      border-radius: 6px;
+      border: 1.5px solid var(--border-strong);
+      display: grid;
+      place-items: center;
+      transition: all 0.18s;
+      flex-shrink: 0;
+      svg { width: 12px; height: 12px; color: #fff; opacity: 0; transition: opacity 0.18s; }
+    }
+    input:checked + .box { background: var(--gradient-brand); border-color: transparent; }
+    input:checked + .box svg { opacity: 1; }
+  }
+
+  .link-muted { font-size: 13.5px; color: var(--brand-glow); font-weight: 600; }
+
+  // Submit tugma
+  .btn-submit {
+    width: 100%;
+    padding: 14px;
+    border-radius: var(--radius-md);
+    background: var(--gradient-brand);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+    transition: transform 0.18s, box-shadow 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    &:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(99, 102, 241, 0.55); }
+    &:disabled { opacity: 0.6; cursor: not-allowed; }
+    svg { width: 18px; height: 18px; }
+  }
+
+  // Ikkinchi darajali tugma (masalan "o'tkazib yuborish")
+  .btn-skip {
+    width: 100%;
+    padding: 14px;
+    margin-top: 10px;
+    border-radius: var(--radius-md);
+    background: transparent;
+    border: 2px solid var(--border);
+    color: var(--text-secondary);
+    font-size: 15px;
+    font-weight: 600;
+    transition: all 0.18s;
+    &:hover:not(:disabled) { border-color: var(--border-strong); color: var(--text-primary); }
+    &:disabled { opacity: 0.6; cursor: not-allowed; }
+  }
+
+  // Xato xabari
+  .auth-error {
+    padding: 12px 14px;
+    background: rgba(239, 68, 68, 0.12);
+    color: var(--error);
+    border-radius: var(--radius-sm);
+    font-size: 13.5px;
+    margin-bottom: 18px;
+  }
+
+  // Divider
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 24px 0;
+    &::before, &::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    span { font-size: 13px; color: var(--text-muted); }
+  }
+
+  // Social
+  .socials {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+
+    .social-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      padding: 12px;
+      border-radius: var(--radius-md);
+      background: var(--bg-card);
+      border: 1.5px solid var(--border);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      transition: all 0.18s;
+      &:hover { border-color: var(--border-strong); background: var(--bg-elevated); transform: translateY(-2px); }
+      svg { width: 19px; height: 19px; }
+    }
+  }
+
+  // Hisob turi kartalari
+  .type-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 26px;
+  }
+  .type-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px;
+    border-radius: var(--radius-lg);
+    border: 2px solid var(--border);
+    background: var(--bg-card);
+    cursor: pointer;
+    transition: all 0.2s var(--ease);
+    text-align: left;
+    width: 100%;
+
+    &:hover { border-color: var(--border-strong); transform: translateY(-2px); }
+    &.active { border-color: var(--brand); background: var(--bg-elevated); }
+
+    .tc-ic {
+      width: 52px; height: 52px;
+      border-radius: var(--radius-md);
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+      color: #fff;
+      svg { width: 26px; height: 26px; }
+    }
+    &.personal .tc-ic { background: linear-gradient(135deg, #10B981, #22D3EE); }
+    &.business .tc-ic { background: linear-gradient(135deg, #6366F1, #8B5CF6); }
+    &.visa .tc-ic { background: linear-gradient(135deg, #6366F1, #8B5CF6); font-size: 9px; font-weight: 800; }
+    &.mastercard .tc-ic { background: linear-gradient(135deg, #0F172A, #334155); font-size: 10px; font-weight: 800; }
+
+    .tc-info { flex: 1; }
+    .tc-title { font-size: 16.5px; font-weight: 700; margin-bottom: 3px; }
+    .tc-desc { font-size: 13px; color: var(--text-secondary); }
+
+    .tc-check {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      border: 2px solid var(--border-strong);
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+      transition: all 0.18s;
+      color: #fff;
+      svg { width: 13px; height: 13px; opacity: 0; transition: opacity 0.18s; }
+    }
+    &.active .tc-check { background: var(--brand); border-color: var(--brand); }
+    &.active .tc-check svg { opacity: 1; }
+  }
+
+  // Orqaga tugma
+  .back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 18px;
+    transition: color 0.18s;
+    &:hover { color: var(--text-primary); }
+    svg { width: 16px; height: 16px; }
+  }
+
+  // Tanlangan tur chip
+  .type-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 7px 14px;
+    border-radius: var(--radius-full);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    font-size: 13px;
+    font-weight: 600;
+
+    .d { width: 8px; height: 8px; border-radius: 50%; }
+    &.personal .d { background: var(--success); }
+    &.business .d { background: var(--brand); }
+  }
+
+  // Footer
+  .fp-foot {
+    margin-top: auto;
+    padding-top: 30px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-muted);
+    a { color: var(--brand-glow); font-weight: 600; }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth *, .auth *::before, .auth *::after { animation: none !important; transition: none !important; }
+}
