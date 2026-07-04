@@ -120,6 +120,7 @@ function seedBusinessEmpty() {
     // Biznes dashboard obunasi — founder har doim bepul, boshqalar to'lov qilishi kerak.
     subscriptionActive: isFounderProfile(),
     subscriptionPlan: '',
+    verification: { status: 'none', taxId: '', legalAddress: '' },
   };
 }
 
@@ -152,6 +153,7 @@ function readBusiness() {
         parsed.baseline = { revenue: parsed.revenue, salesCount: parsed.salesCount, avgOrder: parsed.avgOrder };
       }
       if (parsed.subscriptionActive === undefined) parsed.subscriptionActive = isFounderProfile();
+      if (!parsed.verification) parsed.verification = { status: 'none', taxId: '', legalAddress: '' };
     } catch { /* fall through to reseed */ }
   }
   if (!parsed) parsed = seedBusinessEmpty();
@@ -320,7 +322,15 @@ function subscribe(plan, cardPayload) {
   b.subscriptionPlan = plan;
   writeBusiness(b);
   addNotification('Obuna faollashtirildi', `${PLAN_LABELS[plan] || plan} reja bo'yicha ${card.num} kartasidan to'lov muvaffaqiyatli amalga oshirildi. Biznes paneliga xush kelibsiz!`, 'system');
+  addNotification("Biznes ma'lumotlaringizni to'ldiring", "STIR va yuridik manzilingizni qo'shing — bu hisobingiz ishonchliligini oshiradi. Sozlamalar bo'limidan istalgan vaqtda qo'shishingiz mumkin.", 'bizinfo');
   return { active: true, plan, founder: isFounderProfile(), card: cardPayload?.cardId ? undefined : card };
+}
+
+function updateBizVerification(taxId, legalAddress) {
+  const b = readBusiness();
+  b.verification = { status: 'pending', taxId, legalAddress };
+  writeBusiness(b);
+  return { verification: b.verification };
 }
 
 function applyBizWithdraw(amount, cardId) {
@@ -447,5 +457,5 @@ export const mockStore = {
   addCard, toggleFreezeCard, removeCard, addContact,
   getBusiness, applyBizWithdraw, applyBizUtilityPayment, addLink, addInvoice, addCheckoutPage, toggleCheckoutPage, addTeamMember, markInvoicePaid,
   getNotifications, markAllNotificationsRead,
-  getSubscription, subscribe,
+  getSubscription, subscribe, updateBizVerification,
 };

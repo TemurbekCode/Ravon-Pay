@@ -21,6 +21,7 @@ export function BusinessProvider({ children }) {
   const [cards, setCards] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [subscription, setSubscription] = useState({ active: false, plan: '', founder: false });
+  const [verification, setVerification] = useState({ status: 'none', taxId: '', legalAddress: '' });
   const [loading, setLoading] = useState(true);
 
   const loadBusinessData = async () => {
@@ -39,6 +40,7 @@ export function BusinessProvider({ children }) {
     setAvgOrder(overview.avgOrder ?? 0);
     setBaseline(overview.baseline ?? { revenue: overview.revenue ?? 0, salesCount: overview.salesCount ?? 0, avgOrder: overview.avgOrder ?? 0 });
     setLinks(overview.links ?? []);
+    setVerification(overview.verification ?? { status: 'none', taxId: '', legalAddress: '' });
     setBalance(balRes.balance ?? { available: 0, pending: 0 });
     setPayouts(balRes.payouts ?? []);
     setInvoices(invRes.invoices ?? []);
@@ -96,6 +98,12 @@ export function BusinessProvider({ children }) {
     return card;
   };
 
+  const submitVerification = async (taxId, legalAddress) => {
+    const res = await businessService.submitVerification({ taxId, legalAddress });
+    setVerification(res.verification);
+    return res;
+  };
+
   const createLink = async (title, amount) => {
     const res = await paymentService.createLink({ title, amount });
     setLinks((ls) => [res, ...ls]);
@@ -147,8 +155,8 @@ export function BusinessProvider({ children }) {
 
   const value = {
     revenue, salesCount, avgOrder, baseline, balance, links, invoices, checkoutPages, team, customers,
-    transactions, payouts, cards, notifications, subscription, loading,
-    withdraw, payUtility, createLink, createInvoice, markInvoicePaid, createCheckoutPage, toggleCheckoutPage, inviteTeamMember, markNotificationsRead, subscribe, addCard,
+    transactions, payouts, cards, notifications, subscription, verification, loading,
+    withdraw, payUtility, createLink, createInvoice, markInvoicePaid, createCheckoutPage, toggleCheckoutPage, inviteTeamMember, markNotificationsRead, subscribe, addCard, submitVerification,
   };
 
   return <BusinessContext.Provider value={value}>{children}</BusinessContext.Provider>;

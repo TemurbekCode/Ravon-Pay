@@ -91,7 +91,7 @@ export default function BizTopbar({ onMenu, onOpenSettings, t }) {
         </div>
       </header>
       <AddPersonalProfileModal show={addProfileOpen} onClose={() => setAddProfileOpen(false)} t={t} />
-      <NotificationsPanel show={notifOpen} onClose={() => setNotifOpen(false)} notifications={notifications} onMarkAllRead={markNotificationsRead} t={t} />
+      <NotificationsPanel show={notifOpen} onClose={() => setNotifOpen(false)} notifications={notifications} onMarkAllRead={markNotificationsRead} onOpenSettings={onOpenSettings} t={t} />
     </>
   );
 }

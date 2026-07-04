@@ -25,12 +25,18 @@ function BusinessShell() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
 
   useReveal([pathname]);
 
   const t = (key) => BIZ_I18N[lang]?.[key] ?? BIZ_I18N.uz[key] ?? key;
   const closeSidebar = () => setSidebarOpen(false);
   const newLink = () => showToast(t('toast.new'));
+
+  const handleUpgrade = async (plan, cardPayload) => {
+    await subscribe(plan, cardPayload);
+    showToast(t('pro.success'));
+  };
 
   // Obuna sotib olishni xohlamagan foydalanuvchi shaxsiy profiliga qaytadi
   // (agar hali faollashtirmagan bo'lsa, avtomatik bo'sh shaxsiy profil ochiladi).
@@ -50,7 +56,7 @@ function BusinessShell() {
 
   return (
     <div className="app">
-      <BizSidebar open={sidebarOpen} onClose={closeSidebar} onOpenSettings={() => setSettingsOpen(true)} t={t} />
+      <BizSidebar open={sidebarOpen} onClose={closeSidebar} onOpenSettings={() => setSettingsOpen(true)} onOpenUpgrade={() => setUpgradeOpen(true)} t={t} />
       <div className={`overlay ${sidebarOpen ? 'show' : ''}`} onClick={closeSidebar} />
       <main className="main">
         <BizTopbar onMenu={() => setSidebarOpen(true)} onOpenSettings={() => setSettingsOpen(true)} showToast={showToast} t={t} />
@@ -60,6 +66,7 @@ function BusinessShell() {
       </main>
       <BizBottomNav onOpenSettings={() => setSettingsOpen(true)} onNewLink={newLink} t={t} />
       <BizSettingsModal show={settingsOpen} onClose={() => setSettingsOpen(false)} t={t} />
+      <UpgradeProModal show={upgradeOpen} onClose={() => setUpgradeOpen(false)} onSubscribe={handleUpgrade} currentPlan={subscription.plan} cards={cards} t={t} />
     </div>
   );
 }

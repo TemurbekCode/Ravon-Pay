@@ -222,7 +222,7 @@ CREATE TABLE IF NOT EXISTS provider_transactions (
 
 // Himoya migratsiyasi — agar "businesses" jadvali oldingi versiyadan (obuna
 // ustunlarisiz) qolgan bo'lsa, mavjud ma'lumotlarni yo'qotmasdan qo'shib qo'yadi.
-for (const col of ['subscription_active INTEGER DEFAULT 0', 'subscription_plan TEXT DEFAULT \'\'', 'subscription_started_at TEXT DEFAULT \'\'', 'baseline_month TEXT DEFAULT \'\'']) {
+for (const col of ['subscription_active INTEGER DEFAULT 0', 'subscription_plan TEXT DEFAULT \'\'', 'subscription_started_at TEXT DEFAULT \'\'', 'baseline_month TEXT DEFAULT \'\'', 'tax_id TEXT DEFAULT \'\'', 'legal_address TEXT DEFAULT \'\'', 'verification_status TEXT DEFAULT \'none\'']) {
   try { await client.execute(`ALTER TABLE businesses ADD COLUMN ${col}`); } catch { /* ustun allaqachon mavjud */ }
 }
 try { await client.execute("ALTER TABLE cards ADD COLUMN holder TEXT DEFAULT ''"); } catch { /* ustun allaqachon mavjud */ }

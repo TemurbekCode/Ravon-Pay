@@ -53,6 +53,7 @@ router.post('/subscribe', ah(async (req, res) => {
   await db.prepare('UPDATE businesses SET subscription_active = 1, subscription_plan = ?, subscription_started_at = ? WHERE user_id = ?')
     .run(plan, new Date().toISOString(), req.userId);
   await addNotification(req.userId, "Obuna faollashtirildi", `${PLAN_LABELS[plan]} reja bo'yicha ${card.num} kartasidan to'lov muvaffaqiyatli amalga oshirildi. Biznes paneliga xush kelibsiz!`, 'system');
+  await addNotification(req.userId, "Biznes ma'lumotlaringizni to'ldiring", "STIR va yuridik manzilingizni qo'shing — bu hisobingiz ishonchliligini oshiradi. Sozlamalar bo'limidan istalgan vaqtda qo'shishingiz mumkin.", 'bizinfo');
   res.json({ active: true, plan, founder: isFounder(req.dbUser.email), card: cardId ? undefined : card });
 }));
 
@@ -80,6 +81,14 @@ router.post('/withdraw', ah(async (req, res) => {
   await addNotification(req.userId, "Yechib olish so'rovi", `${formatCurrency(amount)} so'm ${card.num} kartangizga yechib olinmoqda`, 'out');
   const b = await getBusiness(req.userId);
   res.json({ balance: b.balance, payouts: b.payouts, notifications: await getNotifications(req.userId) });
+}));
+
+router.patch('/verification', ah(async (req, res) => {
+  const { taxId, legalAddress } = req.body || {};
+  if (!taxId || !legalAddress) return res.status(400).json({ message: "STIR va yuridik manzil to'ldirilishi shart" });
+  await db.prepare("UPDATE businesses SET tax_id = ?, legal_address = ?, verification_status = 'pending' WHERE user_id = ?")
+    .run(taxId, legalAddress, req.userId);
+  res.json({ verification: { status: 'pending', taxId, legalAddress } });
 }));
 
 router.post('/utilities/pay', ah(async (req, res) => {

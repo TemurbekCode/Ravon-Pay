@@ -1,10 +1,7 @@
-import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { useToast } from './ToastContext.jsx';
 import { BIZ_ROUTES } from './business.routes.js';
 import { useBusiness } from '../../../hooks/useBusiness.js';
 import { useAuth } from '../../../hooks/useAuth.js';
-import UpgradeProModal from './UpgradeProModal.jsx';
 
 const SVG = {
   overview: <><rect x="3" y="3" width="7" height="9" rx="1.5" /><rect x="14" y="3" width="7" height="5" rx="1.5" /><rect x="14" y="12" width="7" height="9" rx="1.5" /><rect x="3" y="16" width="7" height="5" rx="1.5" /></>,
@@ -31,19 +28,12 @@ function Item({ to, end, icon, label, badge, badgeNew, onClose }) {
   );
 }
 
-export default function BizSidebar({ open, onClose, onOpenSettings, t }) {
-  const { showToast } = useToast();
-  const { links, team, subscription, subscribe, cards } = useBusiness();
+export default function BizSidebar({ open, onClose, onOpenSettings, onOpenUpgrade, t }) {
+  const { links, team, subscription } = useBusiness();
   const { user } = useAuth();
-  const [proOpen, setProOpen] = useState(false);
 
   const companyName = user?.companyName || user?.fullName || t('biz.plan');
   const companyInitials = companyName.split(' ').map((p) => p[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || 'B';
-
-  const handleSubscribe = async (plan, cardPayload) => {
-    await subscribe(plan, cardPayload);
-    showToast(t('pro.success'));
-  };
 
   return (
     <aside className={`sidebar ${open ? 'open' : ''}`}>
@@ -58,7 +48,7 @@ export default function BizSidebar({ open, onClose, onOpenSettings, t }) {
         <input type="text" placeholder={t('top.search')} />
       </div>
 
-      <div className="biz-switch" onClick={() => setProOpen(true)}>
+      <div className="biz-switch" onClick={onOpenUpgrade}>
         <div className="biz-logo">{companyInitials}</div>
         <div className="biz-info"><div className="biz-name">{companyName}</div><div className="biz-plan">{subscription.founder ? t('biz.plan') : (subscription.plan === 'yearly' ? t('sub.yearly') : t('sub.monthly'))}</div></div>
         <svg className="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6" /></svg>
@@ -98,10 +88,9 @@ export default function BizSidebar({ open, onClose, onOpenSettings, t }) {
         <div className="upgrade-card">
           <h4>{t('up.title')}</h4>
           <p>{t('up.sub')}</p>
-          <button onClick={() => setProOpen(true)}>{t('up.btn')}</button>
+          <button onClick={onOpenUpgrade}>{t('up.btn')}</button>
         </div>
       </div>
-      <UpgradeProModal show={proOpen} onClose={() => setProOpen(false)} onSubscribe={handleSubscribe} currentPlan={subscription.plan} cards={cards} t={t} />
     </aside>
   );
 }

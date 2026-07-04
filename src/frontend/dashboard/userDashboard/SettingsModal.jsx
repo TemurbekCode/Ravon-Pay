@@ -5,6 +5,8 @@ import { useLanguage } from '../../../hooks/useLanguage.js';
 import { useAuth } from '../../../hooks/useAuth.js';
 import { getInitials } from '../../../utils/formatCurrency.js';
 import { ROUTES } from '../../../utils/constants.js';
+import TermsModal from '../../shared/TermsModal.jsx';
+import SupportModal from '../../shared/SupportModal.jsx';
 
 const LANGS = [
   { code: 'uz', flag: '🇺🇿', label: "O'zbekcha" },
@@ -32,6 +34,8 @@ export default function SettingsModal({ show, onClose, t }) {
   const [push, setPush] = useState(true);
   const [emailNotif, setEmailNotif] = useState(true);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [termsOpen, setTermsOpen] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(false);
 
   const goProfile = () => { navigate(ROUTES.profile); onClose(); };
 
@@ -55,6 +59,7 @@ export default function SettingsModal({ show, onClose, t }) {
   const handleDelete = () => { logout(); navigate(ROUTES.login); };
 
   return (
+    <>
     <div className={`modal-overlay ${show ? 'show' : ''}`} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal">
         <div className="modal-head">
@@ -150,11 +155,11 @@ export default function SettingsModal({ show, onClose, t }) {
 
         <div className="setting-block">
           <div className="setting-label">{t('set.support')}</div>
-          <a className="pd-item" href="https://t.me/ravonpay" target="_blank" rel="noreferrer">
+          <button className="pd-item" onClick={() => setSupportOpen(true)}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H5l2.5-3A8.5 8.5 0 1 1 21 11.5Z" /></svg>
             <span>{t('set.contactSupport')}</span>
-          </a>
-          <button className="pd-item">
+          </button>
+          <button className="pd-item" onClick={() => setTermsOpen(true)}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" /><path d="M14 2v6h6M9 13h6M9 17h6" /></svg>
             <span>{t('set.terms')}</span>
           </button>
@@ -181,5 +186,8 @@ export default function SettingsModal({ show, onClose, t }) {
         <div className="set-version">{t('set.version')} 1.0.0</div>
       </div>
     </div>
+    <TermsModal show={termsOpen} onClose={() => setTermsOpen(false)} />
+    <SupportModal show={supportOpen} onClose={() => setSupportOpen(false)} t={t} />
+    </>
   );
 }

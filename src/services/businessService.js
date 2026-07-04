@@ -53,6 +53,15 @@ export const businessService = {
     }
   },
 
+  submitVerification: async (data) => {
+    try {
+      return await apiClient.patch('/business/verification', data);
+    } catch (err) {
+      if (isNetworkError(err)) return mockStore.updateBizVerification(data.taxId, data.legalAddress);
+      throw err;
+    }
+  },
+
   payUtility: async (data) => {
     try {
       return await apiClient.post('/business/utilities/pay', data);

@@ -99,6 +99,7 @@ export async function getBusiness(userId) {
     revenue: b.revenue, salesCount: b.sales_count, avgOrder: b.avg_order,
     baseline: { revenue: b.baseline_revenue, salesCount: b.baseline_sales_count, avgOrder: b.baseline_avg_order },
     balance: { available: b.balance_available, pending: b.balance_pending },
+    verification: { status: b.verification_status || 'none', taxId: b.tax_id || '', legalAddress: b.legal_address || '' },
     links: linkRows.map(rowToLink),
     invoices: invoiceRows.map(rowToInvoice),
     checkoutPages: checkoutRows.map(rowToCheckoutPage),

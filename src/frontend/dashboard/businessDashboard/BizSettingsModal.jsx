@@ -3,8 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../../hooks/useTheme.js';
 import { useLanguage } from '../../../hooks/useLanguage.js';
 import { useAuth } from '../../../hooks/useAuth.js';
+import { useBusiness } from '../../../hooks/useBusiness.js';
 import { getInitials } from '../../../utils/formatCurrency.js';
 import { ROUTES } from '../../../utils/constants.js';
+import TermsModal from '../../shared/TermsModal.jsx';
+import SupportModal from '../../shared/SupportModal.jsx';
 
 const LANGS = [
   { code: 'uz', flag: '🇺🇿', label: "O'zbekcha" },
@@ -16,6 +19,7 @@ export default function BizSettingsModal({ show, onClose, t }) {
   const { theme, setTheme } = useTheme();
   const { lang, setLang } = useLanguage();
   const { user, logout, updateProfile } = useAuth();
+  const { verification, submitVerification } = useBusiness();
   const navigate = useNavigate();
   const check = <span className="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M20 6 9 17l-5-5" /></svg></span>;
 
@@ -32,6 +36,13 @@ export default function BizSettingsModal({ show, onClose, t }) {
   const [push, setPush] = useState(true);
   const [emailNotif, setEmailNotif] = useState(true);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [verifyOpen, setVerifyOpen] = useState(false);
+  const [taxIdValue, setTaxIdValue] = useState(verification?.taxId || '');
+  const [addressValue, setAddressValue] = useState(verification?.legalAddress || '');
+  const [verifyMsg, setVerifyMsg] = useState('');
+  const [verifyBusy, setVerifyBusy] = useState(false);
+  const [termsOpen, setTermsOpen] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(false);
 
   const goProfile = () => { navigate(ROUTES.profile); onClose(); };
 
@@ -52,9 +63,24 @@ export default function BizSettingsModal({ show, onClose, t }) {
     await updateProfile({ email: '' });
   };
 
+  const submitVerify = async (e) => {
+    e.preventDefault();
+    setVerifyMsg('');
+    setVerifyBusy(true);
+    try {
+      await submitVerification(taxIdValue.trim(), addressValue.trim());
+      setVerifyOpen(false);
+    } catch (err) {
+      setVerifyMsg(err.message || 'Xatolik yuz berdi');
+    } finally {
+      setVerifyBusy(false);
+    }
+  };
+
   const handleDelete = () => { logout(); navigate(ROUTES.login); };
 
   return (
+    <>
     <div className={`modal-overlay ${show ? 'show' : ''}`} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal">
         <div className="modal-head">
@@ -92,6 +118,34 @@ export default function BizSettingsModal({ show, onClose, t }) {
             <span>{t('profile.2fa')}</span>
             <div className={`toggle-switch ${twoFa ? 'on' : ''}`} onClick={() => setTwoFa((v) => !v)} />
           </div>
+        </div>
+
+        <div className="setting-block">
+          <div className="setting-label">{t('verify.title')}</div>
+          <button className="pd-item" onClick={() => setVerifyOpen((v) => !v)}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" /><path d="M14 2v6h6M9 13h6M9 17h6" /></svg>
+            <span>{t('verify.taxId')}</span>
+            <span className={`verify-status ${verification.status}`} style={{ marginLeft: 'auto' }}>
+              {verification.status === 'pending' ? t('verify.pending') : t('verify.none')}
+            </span>
+          </button>
+          {verification.status === 'pending' && !verifyOpen && (
+            <p style={{ fontSize: 12.5, color: 'var(--text-muted)', padding: '4px 12px 0' }}>{t('verify.pendingNote')}</p>
+          )}
+          {verifyOpen && (
+            <form className="pw-form" onSubmit={submitVerify}>
+              <div className="biz-field">
+                <label>{t('verify.taxId')}</label>
+                <input type="text" placeholder={t('verify.taxIdPh')} value={taxIdValue} onChange={(e) => setTaxIdValue(e.target.value)} required />
+              </div>
+              <div className="biz-field">
+                <label>{t('verify.address')}</label>
+                <input type="text" placeholder={t('verify.addressPh')} value={addressValue} onChange={(e) => setAddressValue(e.target.value)} required />
+              </div>
+              {verifyMsg && <div className="pw-msg">{verifyMsg}</div>}
+              <button type="submit" className="btn-new" style={{ width: '100%', justifyContent: 'center' }} disabled={verifyBusy}>{t('verify.submit')}</button>
+            </form>
+          )}
         </div>
 
         <div className="setting-block">
@@ -150,11 +204,11 @@ export default function BizSettingsModal({ show, onClose, t }) {
 
         <div className="setting-block">
           <div className="setting-label">{t('set.support')}</div>
-          <a className="pd-item" href="https://t.me/ravonpay" target="_blank" rel="noreferrer">
+          <button className="pd-item" onClick={() => setSupportOpen(true)}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H5l2.5-3A8.5 8.5 0 1 1 21 11.5Z" /></svg>
             <span>{t('set.contactSupport')}</span>
-          </a>
-          <button className="pd-item">
+          </button>
+          <button className="pd-item" onClick={() => setTermsOpen(true)}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" /><path d="M14 2v6h6M9 13h6M9 17h6" /></svg>
             <span>{t('set.terms')}</span>
           </button>
@@ -181,5 +235,8 @@ export default function BizSettingsModal({ show, onClose, t }) {
         <div className="set-version">{t('set.version')} 1.0.0</div>
       </div>
     </div>
+    <TermsModal show={termsOpen} onClose={() => setTermsOpen(false)} />
+    <SupportModal show={supportOpen} onClose={() => setSupportOpen(false)} t={t} />
+    </>
   );
 }
