@@ -122,10 +122,10 @@ export default function BizSettingsModal({ show, onClose, t }) {
 
         <div className="setting-block">
           <div className="setting-label">{t('verify.title')}</div>
-          <button className="pd-item" onClick={() => setVerifyOpen((v) => !v)}>
+          <button className="pd-item pd-item-verify" onClick={() => setVerifyOpen((v) => !v)}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" /><path d="M14 2v6h6M9 13h6M9 17h6" /></svg>
-            <span>{t('verify.taxId')}</span>
-            <span className={`verify-status ${verification.status}`} style={{ marginLeft: 'auto' }}>
+            <span className="pd-item-grow">{t('verify.taxId')}</span>
+            <span className={`verify-status ${verification.status}`}>
               {verification.status === 'pending' ? t('verify.pending') : t('verify.none')}
             </span>
           </button>

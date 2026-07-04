@@ -522,8 +522,19 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.03em;
+  flex-shrink: 0;
+  margin-left: auto;
   &.none { color: var(--text-muted); background: var(--bg-elevated); }
   &.pending { color: var(--warning); background: rgba(245, 158, 11, 0.12); }
+}
+// Uzun label (masalan "STIR (soliq to'lovchi raqami)") tor ekranda
+// holat-belgisiga tegib ketmasligi uchun: label o'z ustunida o'raladi,
+// belgi esa tepaga tekislanib turadi.
+.pd-item.pd-item-verify {
+  align-items: flex-start;
+  gap: 10px;
+  .pd-item-grow { flex: 1; min-width: 0; }
+  .verify-status { margin-top: 1px; }
 }
 
 .content {
@@ -563,7 +574,7 @@
 .date-pick-menu {
   position: absolute;
   top: calc(100% + 8px);
-  right: 0;
+  left: 0;
   z-index: 30;
   min-width: 140px;
   background: var(--bg-card);
@@ -986,7 +997,11 @@
   opacity: 0;
   transform: translateY(20px);
   transition: opacity 0.6s var(--ease), transform 0.6s var(--ease);
-  &.visible { opacity: 1; transform: translateY(0); }
+  // translateY(0) emas, none — chunki har qanday non-none transform qiymati
+  // yangi stacking context yaratadi va shu element ichidagi absolut
+  // pozitsiyalangan (masalan dropdown) elementlarning z-index'ini "qamab"
+  // qo'yishi mumkin (keyinroq DOM'da kelgan aka-uka elementlar uni bosib chiqarib yuboradi).
+  &.visible { opacity: 1; transform: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .app *, .app *::before, .app *::after { animation: none !important; transition: none !important; }
@@ -1022,9 +1037,10 @@
   overflow-y: auto;
 }
 .modal-overlay.show .modal { transform: scale(1) translateY(0); }
-.modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; h3 { font-family: var(--font-display); font-size: 20px; font-weight: 700; } }
+.modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 24px; h3 { font-family: var(--font-display); font-size: 20px; font-weight: 700; flex: 1; min-width: 0; } }
 .modal-close {
   width: 36px; height: 36px;
+  flex-shrink: 0;
   border-radius: 50%;
   background: var(--bg-elevated);
   display: grid; place-items: center;
