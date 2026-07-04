@@ -1,8 +1,11 @@
+import { useEffect, useRef, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useAuth } from '../../../../hooks/useAuth.js';
 import { useBusiness } from '../../../../hooks/useBusiness.js';
 import { formatCurrency, uzsToUsd } from '../../../../utils/formatCurrency.js';
 import RevenueChart from '../RevenueChart.jsx';
+
+const RANGE_KEYS = { 7: 'chart.7d', 30: 'chart.30d', 12: 'chart.12m' };
 
 const copyIcon = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>;
 const linkIcon = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.5 1.5" /><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7L12 19" /></svg>;
@@ -39,6 +42,15 @@ export default function Overview() {
   const { user } = useAuth();
   const { revenue, salesCount, avgOrder, baseline, links, customers, transactions, invoices } = useBusiness();
   const fullName = user?.fullName || 'Foydalanuvchi';
+  const [range, setRange] = useState(30);
+  const [rangeOpen, setRangeOpen] = useState(false);
+  const rangeRef = useRef(null);
+
+  useEffect(() => {
+    const close = (e) => { if (rangeRef.current && !rangeRef.current.contains(e.target)) setRangeOpen(false); };
+    document.addEventListener('click', close);
+    return () => document.removeEventListener('click', close);
+  }, []);
   const pendingInvoices = invoices.filter((i) => i.status === 'pending').length;
   const revenuePct = pctChange(revenue, baseline.revenue);
   const salesPct = pctChange(salesCount, baseline.salesCount);
@@ -56,7 +68,21 @@ export default function Overview() {
           <p>{t('page.sub')}</p>
         </div>
         <div className="head-actions">
-          <button className="date-pick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>{t('page.range')}</button>
+          <div className="date-pick-wrap" ref={rangeRef}>
+            <button className="date-pick" onClick={(e) => { e.stopPropagation(); setRangeOpen((v) => !v); }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+              {t(RANGE_KEYS[range])}
+            </button>
+            {rangeOpen && (
+              <div className="date-pick-menu">
+                {[7, 30, 12].map((r) => (
+                  <button key={r} className={`date-pick-opt ${range === r ? 'active' : ''}`} onClick={() => { setRange(r); setRangeOpen(false); }}>
+                    {t(RANGE_KEYS[r])}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -93,7 +119,7 @@ export default function Overview() {
 
       {/* CHART + DONUT */}
       <div className="grid-main">
-        <RevenueChart t={t} />
+        <RevenueChart t={t} range={range} onRangeChange={setRange} />
         <div className="panel reveal">
           <div className="panel-head"><div className="panel-title">{t('donut.title')}</div></div>
           <div className="donut-wrap">

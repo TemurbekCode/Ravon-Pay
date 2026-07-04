@@ -1,12 +1,14 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useBusiness } from '../../../hooks/useBusiness.js';
 import { buildRevenueSeries } from '../../../utils/chartSeries.js';
 
 // Daromad dinamikasi grafigi — haqiqiy tranzaksiyalar asosida quriladi.
-// Hisobda savdo bo'lmasa, chiziq 0 da tekis turadi.
-export default function RevenueChart({ t }) {
+// Hisobda savdo bo'lmasa, chiziq 0 da tekis turadi. `range`/`onRangeChange`
+// sahifa darajasidagi (Overview) davr tanlagichi bilan bir xil holatni
+// baham ko'radi — shu orqali tepadagi "So'nggi 30 kun" tugmasi ham shu
+// grafikni real o'zgartiradi.
+export default function RevenueChart({ t, range, onRangeChange }) {
   const { transactions } = useBusiness();
-  const [range, setRange] = useState(30);
   const svgRef = useRef(null);
 
   useEffect(() => {
@@ -49,9 +51,9 @@ export default function RevenueChart({ t }) {
           <div className="panel-sub">{t('chart.sub')}</div>
         </div>
         <div className="chip-group">
-          <button className={range === 7 ? 'active' : ''} onClick={() => setRange(7)}>{t('chart.7d')}</button>
-          <button className={range === 30 ? 'active' : ''} onClick={() => setRange(30)}>{t('chart.30d')}</button>
-          <button className={range === 12 ? 'active' : ''} onClick={() => setRange(12)}>{t('chart.12m')}</button>
+          <button className={range === 7 ? 'active' : ''} onClick={() => onRangeChange(7)}>{t('chart.7d')}</button>
+          <button className={range === 30 ? 'active' : ''} onClick={() => onRangeChange(30)}>{t('chart.30d')}</button>
+          <button className={range === 12 ? 'active' : ''} onClick={() => onRangeChange(12)}>{t('chart.12m')}</button>
         </div>
       </div>
       <div className="chart-wrap">

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useBusiness } from '../../../../hooks/useBusiness.js';
 import { formatCurrency } from '../../../../utils/formatCurrency.js';
@@ -11,6 +12,7 @@ function pctChange(current, base) {
 export default function Analytics() {
   const { t } = useOutletContext();
   const { revenue, salesCount, avgOrder, baseline } = useBusiness();
+  const [range, setRange] = useState(30);
   const revenuePct = pctChange(revenue, baseline.revenue);
   const salesPct = pctChange(salesCount, baseline.salesCount);
   const avgOrderPct = pctChange(avgOrder, baseline.avgOrder);
@@ -23,7 +25,7 @@ export default function Analytics() {
         <div className="kpi-sm reveal"><div className="t"><span className="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3v18h18" /><path d="m19 9-5 5-4-4-3 3" /></svg></span><span className={`kpi-pct ${avgOrderPct >= 0 ? 'up' : 'down'}`}>{avgOrderPct >= 0 ? '+' : ''}{avgOrderPct}%</span></div><div className="n">{formatCurrency(avgOrder)}</div><div className="c">{t('analytics.aov')}</div></div>
         <div className="kpi-sm reveal"><div className="t"><span className="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg></span></div><div className="n">3.4%</div><div className="c">{t('kpi.conv')}</div></div>
       </div>
-      <RevenueChart t={t} />
+      <RevenueChart t={t} range={range} onRangeChange={setRange} />
     </>
   );
 }

@@ -648,7 +648,11 @@
     }
     &.center span { margin-top: 2px; }
   }
-  .topbar { padding: 14px 18px; }
+  // Mobil ekranda topbar sahifaning umumiy foni bilan bir xil rangda —
+  // ajratuvchi "panel" ko'rinishi (shisha effekti + pastki chiziq) olib
+  // tashlanadi, shu bilan tepadagi tugmalar sahifaga "suzib turgandek" ko'rinadi.
+  // Planshet/desktopda (min-width: 861px) asl shisha effekti saqlanadi.
+  .topbar { padding: 14px 18px; background: var(--bg-primary); backdrop-filter: none; -webkit-backdrop-filter: none; border-bottom: none; }
   .topbar-title { display: none; }
   .profile-btn-info { display: none; }
   .profile-btn { padding: 4px; }

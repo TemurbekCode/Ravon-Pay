@@ -559,6 +559,33 @@
   svg { width: 16px; height: 16px; }
   &:hover { border-color: var(--border-strong); }
 }
+.date-pick-wrap { position: relative; }
+.date-pick-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
+  min-width: 140px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-pop);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.date-pick-opt {
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-align: left;
+  transition: background 0.15s;
+  &:hover { background: var(--bg-elevated); }
+  &.active { color: var(--brand-glow); background: var(--bg-elevated); }
+}
 .btn-new {
   display: inline-flex;
   align-items: center;
@@ -926,7 +953,11 @@
     }
     &.center span { margin-top: 2px; }
   }
-  .topbar { padding: 14px 18px; }
+  // Mobil ekranda topbar sahifaning umumiy foni bilan bir xil rangda —
+  // ajratuvchi "panel" ko'rinishi (shisha effekti + pastki chiziq) olib
+  // tashlanadi, shu bilan tepadagi tugmalar sahifaga "suzib turgandek" ko'rinadi.
+  // Planshet/desktopda (min-width: 861px) asl shisha effekti saqlanadi.
+  .topbar { padding: 14px 18px; background: var(--bg-primary); backdrop-filter: none; -webkit-backdrop-filter: none; border-bottom: none; }
   .topbar-title { display: none; }
   .profile-btn-info { display: none; }
   .profile-btn { padding: 4px; }
