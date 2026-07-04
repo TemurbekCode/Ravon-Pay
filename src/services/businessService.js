@@ -53,6 +53,15 @@ export const businessService = {
     }
   },
 
+  payUtility: async (data) => {
+    try {
+      return await apiClient.post('/business/utilities/pay', data);
+    } catch (err) {
+      if (isNetworkError(err)) return mockStore.applyBizUtilityPayment(data.category, data.account, data.amount);
+      throw err;
+    }
+  },
+
   listInvoices: async () => {
     try {
       return await apiClient.get('/business/invoices');

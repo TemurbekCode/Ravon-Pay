@@ -17,8 +17,8 @@ export default function BizTopbar({ onMenu, onOpenSettings, t }) {
   const menuRef = useRef(null);
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const name = user?.fullName || 'Aziz Karimov';
-  const email = user?.email || 'aziz@millsavdo.uz';
+  const name = user?.fullName || 'Foydalanuvchi';
+  const contact = user?.phone || '';
 
   useEffect(() => {
     const close = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false); };
@@ -67,7 +67,7 @@ export default function BizTopbar({ onMenu, onOpenSettings, t }) {
             <div className="profile-dropdown">
               <div className="pd-head">
                 <span className="avatar" style={{ width: 46, height: 46, fontSize: 17 }}>{getInitials(name)}</span>
-                <div><div className="pd-name">{name}</div><div className="pd-mail">{email}</div></div>
+                <div><div className="pd-name">{name}</div><div className="pd-mail">{contact}</div></div>
               </div>
               <button className="pd-item" onClick={() => { navigate(ROUTES.profile); setMenuOpen(false); }}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>

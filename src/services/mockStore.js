@@ -32,8 +32,9 @@ function currentUser() {
 }
 
 function profileKey() {
-  const email = currentUser()?.email || 'guest';
-  return email.trim().toLowerCase().replace(/[^a-z0-9]/g, '_');
+  const u = currentUser();
+  const id = u?.phone || u?.email || 'guest';
+  return id.trim().toLowerCase().replace(/[^a-z0-9]/g, '_');
 }
 
 function isFounderProfile() {
@@ -335,6 +336,19 @@ function applyBizWithdraw(amount, cardId) {
   return { ...b, notifications: getNotifications() };
 }
 
+function applyBizUtilityPayment(category, account, amount) {
+  const b = readBusiness();
+  if (amount > b.balance.available) throw new Error('INSUFFICIENT_BALANCE');
+  b.balance = { ...b.balance, available: b.balance.available - amount };
+  b.transactions = [
+    { id: uid('btx'), initials: 'UT', grad: '#F59E0B,#EF4444', name: "Kommunal to'lov", email: account, mi: '', method: category, status: 'done', date: nowLabel(), amount: -amount, in: false },
+    ...b.transactions,
+  ];
+  writeBusiness(b);
+  addNotification("To'lov amalga oshirildi", `${category} uchun ${formatCurrency(amount)} so'm to'landi`, 'out');
+  return { ...b, notifications: getNotifications() };
+}
+
 function addLink(title, amount) {
   const b = readBusiness();
   const link = { id: uid('lnk'), title, slug: title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 24) || uid('l'), uses: 0, amount: Number(amount) || 0 };
@@ -431,7 +445,7 @@ export const mockStore = {
   getWallet, getBalance, getCards, getTransactions, getContacts,
   applyTopUp, applyWithdraw, applySend, applyUtilityPayment,
   addCard, toggleFreezeCard, removeCard, addContact,
-  getBusiness, applyBizWithdraw, addLink, addInvoice, addCheckoutPage, toggleCheckoutPage, addTeamMember, markInvoicePaid,
+  getBusiness, applyBizWithdraw, applyBizUtilityPayment, addLink, addInvoice, addCheckoutPage, toggleCheckoutPage, addTeamMember, markInvoicePaid,
   getNotifications, markAllNotificationsRead,
   getSubscription, subscribe,
 };

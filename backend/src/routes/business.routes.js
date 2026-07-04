@@ -82,6 +82,21 @@ router.post('/withdraw', ah(async (req, res) => {
   res.json({ balance: b.balance, payouts: b.payouts, notifications: await getNotifications(req.userId) });
 }));
 
+router.post('/utilities/pay', ah(async (req, res) => {
+  const { category, account } = req.body || {};
+  const amount = Number(req.body?.amount) || 0;
+  const row = await db.prepare('SELECT balance_available FROM businesses WHERE user_id = ?').get(req.userId);
+  if (amount > row.balance_available) return res.status(400).json({ message: 'INSUFFICIENT_BALANCE' });
+  await db.prepare('UPDATE businesses SET balance_available = balance_available - ? WHERE user_id = ?').run(amount, req.userId);
+  const order = await nextSortOrder('biz_transactions', req.userId);
+  await db.prepare(`INSERT INTO biz_transactions (id, user_id, initials, grad, name, email, mi, method, status, date, amount, is_in, sort_order)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'done', ?, ?, 0, ?)`)
+    .run(uid('btx'), req.userId, 'UT', '#F59E0B,#EF4444', "Kommunal to'lov", account, '', category, nowLabel(), -amount, order);
+  await addNotification(req.userId, "To'lov amalga oshirildi", `${category} uchun ${formatCurrency(amount)} so'm to'landi`, 'out');
+  const b = await getBusiness(req.userId);
+  res.json({ ...b, notifications: await getNotifications(req.userId) });
+}));
+
 router.get('/invoices', ah(async (req, res) => {
   res.json({ invoices: (await getBusiness(req.userId)).invoices });
 }));

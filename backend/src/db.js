@@ -44,6 +44,44 @@ export const db = {
 
 try { await client.execute('PRAGMA foreign_keys = ON;'); } catch { /* remote Turso'da PRAGMA kerak emas */ }
 
+// Eski sxemadan (email majburiy, telefon unique emas — parol bilan kirish
+// davridan qolgan) yangi sxemaga (telefon asosiy, email ixtiyoriy) o'tish —
+// mavjud ma'lumotlarni yo'qotmasdan jadvalni qayta quradi.
+{
+  const existing = await client.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'");
+  if (existing.rows.length) {
+    const info = await client.execute('PRAGMA table_info(users)');
+    const emailCol = info.rows.find((c) => c.name === 'email');
+    if (emailCol && emailCol.notnull === 1) {
+      await client.execute('ALTER TABLE users RENAME TO users_old_migration');
+      await client.execute(`CREATE TABLE users (
+        id TEXT PRIMARY KEY,
+        email TEXT UNIQUE,
+        phone TEXT UNIQUE NOT NULL,
+        password_hash TEXT DEFAULT '',
+        full_name TEXT NOT NULL,
+        company_name TEXT DEFAULT '',
+        account_type TEXT NOT NULL DEFAULT 'personal',
+        profiles TEXT NOT NULL DEFAULT '["personal"]',
+        role TEXT NOT NULL DEFAULT 'user',
+        created_at TEXT NOT NULL
+      )`);
+      const oldRows = await client.execute('SELECT * FROM users_old_migration');
+      const seenPhones = new Set();
+      for (const row of oldRows.rows) {
+        let phone = row.phone || `unknown-${row.id}`;
+        if (seenPhones.has(phone)) phone = `${phone}-${row.id.slice(-4)}`; // duplikat telefonlarni ajratish
+        seenPhones.add(phone);
+        await client.execute({
+          sql: `INSERT INTO users (id, email, phone, password_hash, full_name, company_name, account_type, profiles, role, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          args: [row.id, row.email, phone, row.password_hash, row.full_name, row.company_name, row.account_type, row.profiles, row.role, row.created_at],
+        });
+      }
+      await client.execute('DROP TABLE users_old_migration');
+    }
+  }
+}
+
 // ============================================
 // SXEMA — mockStore.js dagi shakllarning to'g'ridan-to'g'ri server tomonidagi
 // ekvivalenti. Har bir foydalanuvchi (users) uchun wallets/businesses qatori
@@ -52,15 +90,25 @@ try { await client.execute('PRAGMA foreign_keys = ON;'); } catch { /* remote Tur
 await client.executeMultiple(`
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
-  email TEXT UNIQUE NOT NULL,
-  phone TEXT DEFAULT '',
-  password_hash TEXT NOT NULL,
+  email TEXT UNIQUE,
+  phone TEXT UNIQUE NOT NULL,
+  password_hash TEXT DEFAULT '',
   full_name TEXT NOT NULL,
   company_name TEXT DEFAULT '',
   account_type TEXT NOT NULL DEFAULT 'personal',
   profiles TEXT NOT NULL DEFAULT '["personal"]',
   role TEXT NOT NULL DEFAULT 'user',
   created_at TEXT NOT NULL
+);
+
+-- Telefon raqamiga yuborilgan SMS tasdiqlash kodi — ro'yxatdan o'tish va
+-- kirish uchun ham ishlatiladi (parol o'rniga). Har bir telefon uchun faqat
+-- bitta faol kod bo'ladi (yangisi so'ralsa eskisi almashtiriladi).
+CREATE TABLE IF NOT EXISTS otp_codes (
+  phone TEXT PRIMARY KEY,
+  code TEXT NOT NULL,
+  expires_at INTEGER NOT NULL,
+  attempts INTEGER DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS wallets (

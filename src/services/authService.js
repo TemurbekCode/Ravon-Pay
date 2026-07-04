@@ -2,14 +2,15 @@ import { apiClient } from './apiClient.js';
 import { isNetworkError } from './networkUtil.js';
 
 // OFFLINE MOCK REJIMI — backend ulanmagan holatda ishlaydigan zaxira.
-// Har qanday email/telefon bilan ro'yxatdan o'tish/kirish mock rejimda ishlaydi,
-// lekin HAQIQIY kiritilgan ism/kompaniya/hisob turi bilan va bo'sh (nol)
-// hamyon/biznes ma'lumoti bilan boshlanadi.
+// Har qanday telefon raqami bilan ro'yxatdan o'tish/kirish mock rejimda ishlaydi
+// (kod har doim "1234"), lekin HAQIQIY kiritilgan ism/kompaniya/hisob turi bilan
+// va bo'sh (nol) hamyon/biznes ma'lumoti bilan boshlanadi.
 const MOCK_USER_KEY = 'ravonpay_mock_user';
+const MOCK_OTP_CODE = '1234';
 
 // `profiles` — foydalanuvchi qaysi hisob turlarini faollashtirganini bildiradi
 // (masalan ['personal'] yoki ['personal','business']). `hasBoth` shundan kelib chiqadi.
-function makeUser({ accountType = 'personal', email = 'user@ravonpay.uz', fullName = 'Foydalanuvchi', hasBoth = false, companyName = '', phone = '', profiles }) {
+function makeUser({ accountType = 'personal', email = '', fullName = 'Foydalanuvchi', hasBoth = false, companyName = '', phone = '', profiles }) {
   const activeProfiles = profiles || (hasBoth ? ['personal', 'business'] : [accountType]);
   return { id: 'mock-' + Date.now(), fullName, email, phone, accountType, hasBoth: activeProfiles.length >= 2, profiles: activeProfiles, companyName, role: hasBoth ? 'founder' : 'user' };
 }
@@ -32,38 +33,36 @@ function restoreMockUser() {
       return parsed;
     } catch { /* fall through */ }
   }
-  return makeUser({ accountType: 'personal', email: 'user@ravonpay.uz', fullName: 'Test Foydalanuvchi', hasBoth: false });
+  return makeUser({ accountType: 'personal', fullName: 'Test Foydalanuvchi', hasBoth: false });
 }
 
 export const authService = {
-  login: async (data) => {
-    // Login formasi email'ni "identifier" (telefon yoki email) nomi bilan yuboradi.
-    // Backend ishlab turgan bo'lsa — haqiqiy /auth/login chaqiriladi. Faqat backend
-    // o'chirilgan bo'lsagina (tarmoq xatosi) shu yerdagi mock fallback ishga tushadi.
-    const loginEmail = data?.email || data?.identifier;
+  // Ro'yxatdan o'tish/kirish uchun SMS kod so'raydi. `mode: 'register'|'login'`.
+  // Backend o'chirilgan bo'lsa (mock) — kod har doim "1234" bo'ladi.
+  requestOtp: async ({ phone, mode }) => {
     try {
-      return await apiClient.post('/auth/login', data);
+      return await apiClient.post('/auth/otp/request', { phone, mode });
     } catch (err) {
-      if (isNetworkError(err)) {
-        return persistMockSession(makeUser({ accountType: 'personal', email: loginEmail || 'user@ravonpay.uz', fullName: 'Test Foydalanuvchi', hasBoth: false }));
-      }
+      if (isNetworkError(err)) return { sent: true, devCode: MOCK_OTP_CODE };
       throw err;
     }
   },
 
-  register: async (data) => {
-    const acc = data?.accountType || 'personal';
+  // Kodni tekshiradi va ro'yxatdan o'tkazadi (mode: 'register', fullName/accountType/
+  // companyName bilan) yoki mavjud hisobga kiritadi (mode: 'login').
+  verifyOtp: async ({ phone, code, mode, fullName, accountType, companyName }) => {
     try {
-      return await apiClient.post('/auth/register', data);
+      return await apiClient.post('/auth/otp/verify', { phone, code, mode, fullName, accountType, companyName });
     } catch (err) {
       if (isNetworkError(err)) {
+        if (mode === 'register' && code !== MOCK_OTP_CODE) throw new Error("Kod noto'g'ri", { cause: err });
+        const acc = accountType || 'personal';
         return persistMockSession(makeUser({
           accountType: acc,
-          email: data?.email || 'user@ravonpay.uz',
-          fullName: data?.fullName || 'Yangi Foydalanuvchi',
+          fullName: fullName || 'Yangi Foydalanuvchi',
           hasBoth: false,
-          companyName: data?.companyName || '',
-          phone: data?.phone || '',
+          companyName: companyName || '',
+          phone: phone || '',
         }));
       }
       throw err;
@@ -128,14 +127,20 @@ export const authService = {
     }
   },
 
-  // Profil ma'lumotlarini (ism, telefon) yangilaydi va serverda saqlaydi.
+  // Profil ma'lumotlarini (ism, telefon, email) yangilaydi va serverda saqlaydi.
+  // `email: ''` yuborilsa — email o'chiriladi (olib tashlanadi).
   updateProfile: async (data) => {
     try {
       return await apiClient.patch('/auth/me', data);
     } catch (err) {
       if (isNetworkError(err)) {
         const current = restoreMockUser();
-        const updated = { ...current, fullName: data?.fullName ?? current.fullName, phone: data?.phone ?? current.phone };
+        const updated = {
+          ...current,
+          fullName: data?.fullName ?? current.fullName,
+          phone: data?.phone ?? current.phone,
+          email: 'email' in (data || {}) ? data.email : current.email,
+        };
         localStorage.setItem(MOCK_USER_KEY, JSON.stringify(updated));
         return { user: updated };
       }
@@ -158,13 +163,4 @@ export const authService = {
   },
 
   telegramAuth: (data) => apiClient.post('/auth/telegram', data),
-
-  changePassword: async (data) => {
-    try {
-      return await apiClient.post('/auth/change-password', data);
-    } catch (err) {
-      if (isNetworkError(err)) return { ok: true };
-      throw err;
-    }
-  },
 };

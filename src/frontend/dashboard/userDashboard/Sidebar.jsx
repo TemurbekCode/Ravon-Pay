@@ -19,8 +19,8 @@ const MAIN_NAV = [
 
 export default function Sidebar({ open, onClose, onOpenSettings, t }) {
   const { user } = useAuth();
-  const name = user?.fullName || 'Aziz Karimov';
-  const email = user?.email || 'aziz@email.com';
+  const name = user?.fullName || 'Foydalanuvchi';
+  const contact = user?.phone || '';
 
   return (
     <aside className={`sidebar ${open ? 'open' : ''}`}>
@@ -60,7 +60,7 @@ export default function Sidebar({ open, onClose, onOpenSettings, t }) {
           <div className="avatar">{getInitials(name)}</div>
           <div className="user-chip-info">
             <div className="user-chip-name">{name}</div>
-            <div className="user-chip-mail">{email}</div>
+            <div className="user-chip-mail">{contact}</div>
           </div>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 16, height: 16, color: 'var(--text-muted)' }}><path d="m6 9 6 6 6-6" /></svg>
         </NavLink>

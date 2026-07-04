@@ -82,6 +82,14 @@ export function BusinessProvider({ children }) {
     return res;
   };
 
+  const payUtility = async (category, account, amount) => {
+    const res = await businessService.payUtility({ category, account, amount });
+    setBalance(res.balance);
+    setTransactions(res.transactions);
+    setNotifications(res.notifications ?? []);
+    return res;
+  };
+
   const addCard = async (data) => {
     const card = await cardService.createCard(data);
     setCards((cs) => [...cs, card]);
@@ -140,7 +148,7 @@ export function BusinessProvider({ children }) {
   const value = {
     revenue, salesCount, avgOrder, baseline, balance, links, invoices, checkoutPages, team, customers,
     transactions, payouts, cards, notifications, subscription, loading,
-    withdraw, createLink, createInvoice, markInvoicePaid, createCheckoutPage, toggleCheckoutPage, inviteTeamMember, markNotificationsRead, subscribe, addCard,
+    withdraw, payUtility, createLink, createInvoice, markInvoicePaid, createCheckoutPage, toggleCheckoutPage, inviteTeamMember, markNotificationsRead, subscribe, addCard,
   };
 
   return <BusinessContext.Provider value={value}>{children}</BusinessContext.Provider>;

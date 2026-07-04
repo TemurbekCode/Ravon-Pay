@@ -1059,6 +1059,34 @@
     &::placeholder { color: var(--text-muted); }
   }
 }
+.util-block-label { font-size: 12.5px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; }
+.util-recent-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+.util-recent-chip {
+  padding: 8px 14px;
+  border-radius: var(--radius-full);
+  background: var(--bg-elevated);
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  font-size: 12.5px; font-weight: 600;
+  transition: all 0.18s;
+  &:hover { border-color: var(--border-strong); color: var(--text-primary); }
+}
+.util-receipt { text-align: center; padding: 6px 0 2px; }
+.util-receipt-icon {
+  width: 60px; height: 60px; margin: 0 auto 14px;
+  border-radius: 50%;
+  background: rgba(16,185,129,0.13);
+  color: var(--success);
+  display: grid; place-items: center;
+  svg { width: 28px; height: 28px; }
+}
+.util-receipt-title { font-family: var(--font-display); font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+.util-receipt-amount { font-size: 25px; font-weight: 700; font-family: var(--font-display); margin-bottom: 18px; }
+.util-receipt-rows { text-align: left; border-top: 1px solid var(--border); padding-top: 14px; margin-bottom: 20px; }
+.util-receipt-row {
+  display: flex; justify-content: space-between; padding: 7px 0; font-size: 13px; color: var(--text-muted);
+  span:last-child { color: var(--text-primary); font-weight: 600; }
+}
 
 /* ===== HISOB ALMASHTIRGICH ===== */
 .acc-switch {

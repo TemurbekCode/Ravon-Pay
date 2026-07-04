@@ -1,51 +1,3 @@
-// import { createContext, useEffect, useState } from 'react';
-// import { authService } from '../../services/authService.js';
-
-// export const AuthContext = createContext(null);
-
-// export function AuthProvider({ children }) {
-//   const [user, setUser] = useState(null);
-//   const [loading, setLoading] = useState(true);
-
-//   useEffect(() => {
-//     const token = localStorage.getItem('ravonpay_access_token');
-//     if (!token) { setLoading(false); return; }
-//     authService.me()
-//       .then((res) => setUser(res.user ?? res))
-//       .catch(() => localStorage.removeItem('ravonpay_access_token'))
-//       .finally(() => setLoading(false));
-//   }, []);
-
-//   const login = async (credentials) => {
-//     const res = await authService.login(credentials);
-//     localStorage.setItem('ravonpay_access_token', res.accessToken);
-//     setUser(res.user);
-//     return res;
-//   };
-
-//   const register = async (data) => {
-//     const res = await authService.register(data);
-//     if (res.accessToken) {
-//       localStorage.setItem('ravonpay_access_token', res.accessToken);
-//       setUser(res.user);
-//     }
-//     return res;
-//   };
-
-//   const logout = () => {
-//     localStorage.removeItem('ravonpay_access_token');
-//     setUser(null);
-//   };
-
-//   const value = {
-//     user, loading,
-//     isAuthenticated: !!user,
-//     isBusiness: user?.accountType === 'business',
-//     login, register, logout, setUser,
-//   };
-
-//   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-// }
 import { createContext, useEffect, useState } from 'react';
 import { authService } from '../../services/authService.js';
 import { mockStore } from '../../services/mockStore.js';
@@ -66,19 +18,15 @@ export function AuthProvider({ children }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const login = async (credentials) => {
-    const res = await authService.login(credentials);
+  // Telefon raqamiga SMS kod so'raydi (ro'yxatdan o'tish yoki kirish uchun).
+  const requestOtp = (phone, mode) => authService.requestOtp({ phone, mode });
+
+  // Kodni tekshiradi — to'g'ri bo'lsa, hisobga kiritadi (yoki mode='register'
+  // bo'lsa, yangi hisob shu yerda yaratiladi).
+  const verifyOtp = async ({ phone, code, mode, fullName, accountType, companyName }) => {
+    const res = await authService.verifyOtp({ phone, code, mode, fullName, accountType, companyName });
     localStorage.setItem('ravonpay_access_token', res.accessToken);
     setUser(res.user);
-    return res;
-  };
-
-  const register = async (data) => {
-    const res = await authService.register(data);
-    if (res.accessToken) {
-      localStorage.setItem('ravonpay_access_token', res.accessToken);
-      setUser(res.user);
-    }
     return res;
   };
 
@@ -115,7 +63,7 @@ export function AuthProvider({ children }) {
     return res;
   };
 
-  // Profil (ism, telefon) o'zgarishlarini serverda saqlaydi.
+  // Profil (ism, telefon, email) o'zgarishlarini serverda saqlaydi.
   const updateProfile = async (data) => {
     const res = await authService.updateProfile(data);
     setUser(res.user);
@@ -127,7 +75,7 @@ export function AuthProvider({ children }) {
     isAuthenticated: !!user,
     isBusiness: user?.accountType === 'business',
     hasBoth, profiles,
-    login, register, logout, setUser, switchAccount, activateProfile, updateProfile, loginWithGoogle,
+    requestOtp, verifyOtp, logout, setUser, switchAccount, activateProfile, updateProfile, loginWithGoogle,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

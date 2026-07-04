@@ -6,7 +6,7 @@ export const AUTH_I18N = {
     'tab.login': 'Kirish', 'tab.signup': "Ro'yxatdan o'tish",
     'login.title': 'Xush kelibsiz!', 'login.sub': 'Hisobingizga kiring va davom eting.', 'login.remember': 'Meni eslab qol', 'login.forgot': 'Parolni unutdingizmi?', 'login.btn': 'Kirish',
     'f.emailphone': 'Email yoki telefon', 'f.password': 'Parol', 'f.fullname': "To'liq ism", 'f.phone': 'Telefon raqami', 'f.email': 'Email', 'f.company': 'Kompaniya nomi',
-    'ph.emailphone': 'email@misol.com', 'ph.password': '••••••••', 'ph.fullname': 'Aziz Karimov', 'ph.email': 'email@misol.com', 'ph.createpass': 'Kamida 8 belgi', 'ph.company': 'Milliy Savdo MChJ',
+    'ph.emailphone': 'email@misol.com', 'ph.password': '••••••••', 'ph.fullname': 'Ism Familiya', 'ph.email': 'email@misol.com', 'ph.createpass': 'Kamida 8 belgi', 'ph.company': 'Milliy Savdo MChJ',
     'or': 'yoki',
     'type.title': 'Hisob turini tanlang', 'type.sub': "Sizga mos hisob turini tanlang. Keyin o'zgartirish mumkin.", 'type.personal': 'Shaxsiy hisob', 'type.personalDesc': 'Pul yuborish, qabul qilish va shaxsiy xarajatlar uchun.', 'type.business': 'Biznes hisob', 'type.businessDesc': "To'lov havolalari, analitika va jamoa boshqaruvi uchun.", 'type.next': 'Davom etish',
     'back': 'Orqaga', 'form.title': 'Hisob yarating', 'form.terms': 'Men shartlar va maxfiylik siyosatiga roziman', 'form.btn': 'Hisob yaratish',
@@ -14,6 +14,8 @@ export const AUTH_I18N = {
     'foot.help': 'Yordam kerakmi?', 'foot.support': "Qo'llab-quvvatlash",
     'card.title': 'Kartangizni ulang', 'card.sub': "Birinchi to'lovingizni tezroq amalga oshiring — yoki o'tkazib yuboring, kartani keyinroq ham qo'shishingiz mumkin.", 'card.connect': 'Ulash', 'card.skip': "Hozircha o'tkazib yuborish", 'card.error': "Xatolik yuz berdi, qayta urinib ko'ring",
     'cardform.number': 'Karta raqami', 'cardform.expiry': 'Amal qilish muddati', 'cardform.holder': 'Karta egasi', 'cardform.invalid': "Karta ma'lumotlari noto'g'ri. Iltimos, qayta tekshiring.", 'cardform.holderPlaceholder': 'ISM FAMILIYA', 'cardform.err.number': "Karta raqami noto'g'ri", 'cardform.err.expiry': "Amal qilish muddati noto'g'ri yoki tugagan", 'cardform.err.cvv': "CVV 3 ta raqamdan iborat bo'lishi kerak", 'cardform.err.holder': 'Ism familiyangizni kiriting',
+    'otp.title': 'Kodni tasdiqlang', 'otp.sub': 'Telefon raqamingizga yuborilgan 4 xonali kodni kiriting.', 'otp.codePh': '1234', 'otp.verify': 'Tasdiqlash', 'otp.resend': "Kodni qayta yuborish", 'otp.demo': 'Demo rejimi — kod:', 'otp.sendBtn': 'Kod yuborish', 'otp.wrongLen': "Telefon raqami noto'g'ri",
+    'addemail.title': 'Emailingizni saqlang', 'addemail.sub': "Hisobingizni tiklash uchun ixtiyoriy — hozir yoki keyinroq Sozlamalar orqali qo'shishingiz mumkin.", 'addemail.save': 'Saqlash', 'addemail.skip': 'Hozircha kerak emas',
   },
   en: {
     'bp.f1t': 'Payment received', 'bp.f2t': 'Secure & fast', 'bp.f2s': 'Bank-grade protection',
@@ -21,7 +23,7 @@ export const AUTH_I18N = {
     'tab.login': 'Sign in', 'tab.signup': 'Sign up',
     'login.title': 'Welcome back!', 'login.sub': 'Sign in to your account to continue.', 'login.remember': 'Remember me', 'login.forgot': 'Forgot password?', 'login.btn': 'Sign in',
     'f.emailphone': 'Email or phone', 'f.password': 'Password', 'f.fullname': 'Full name', 'f.phone': 'Phone number', 'f.email': 'Email', 'f.company': 'Company name',
-    'ph.emailphone': 'email@example.com', 'ph.password': '••••••••', 'ph.fullname': 'Aziz Karimov', 'ph.email': 'email@example.com', 'ph.createpass': 'At least 8 characters', 'ph.company': 'Milliy Savdo LLC',
+    'ph.emailphone': 'email@example.com', 'ph.password': '••••••••', 'ph.fullname': 'Full name', 'ph.email': 'email@example.com', 'ph.createpass': 'At least 8 characters', 'ph.company': 'Milliy Savdo LLC',
     'or': 'or',
     'type.title': 'Choose account type', 'type.sub': 'Pick the account that fits you. You can change later.', 'type.personal': 'Personal account', 'type.personalDesc': 'For sending, receiving money and personal expenses.', 'type.business': 'Business account', 'type.businessDesc': 'For payment links, analytics and team management.', 'type.next': 'Continue',
     'back': 'Back', 'form.title': 'Create account', 'form.terms': 'I agree to the terms and privacy policy', 'form.btn': 'Create account',
@@ -29,6 +31,8 @@ export const AUTH_I18N = {
     'foot.help': 'Need help?', 'foot.support': 'Support',
     'card.title': 'Connect your card', 'card.sub': 'Make your first payment faster — or skip, you can always add a card later.', 'card.connect': 'Connect', 'card.skip': 'Skip for now', 'card.error': 'Something went wrong, please try again',
     'cardform.number': 'Card number', 'cardform.expiry': 'Expiry date', 'cardform.holder': 'Cardholder name', 'cardform.invalid': 'Card details are invalid. Please check and try again.', 'cardform.holderPlaceholder': 'FIRST LAST', 'cardform.err.number': 'Invalid card number', 'cardform.err.expiry': 'Invalid or expired date', 'cardform.err.cvv': 'CVV must be 3 digits', 'cardform.err.holder': 'Enter the cardholder name',
+    'otp.title': 'Verify code', 'otp.sub': 'Enter the 4-digit code sent to your phone number.', 'otp.codePh': '1234', 'otp.verify': 'Verify', 'otp.resend': 'Resend code', 'otp.demo': 'Demo mode — code:', 'otp.sendBtn': 'Send code', 'otp.wrongLen': 'Invalid phone number',
+    'addemail.title': 'Save your email', 'addemail.sub': 'Optional, for account recovery — you can add it now or later in Settings.', 'addemail.save': 'Save', 'addemail.skip': 'Not now',
   },
   ru: {
     'bp.f1t': 'Платёж получен', 'bp.f2t': 'Безопасно и быстро', 'bp.f2s': 'Банковская защита',
@@ -36,7 +40,7 @@ export const AUTH_I18N = {
     'tab.login': 'Вход', 'tab.signup': 'Регистрация',
     'login.title': 'С возвращением!', 'login.sub': 'Войдите в аккаунт, чтобы продолжить.', 'login.remember': 'Запомнить меня', 'login.forgot': 'Забыли пароль?', 'login.btn': 'Войти',
     'f.emailphone': 'Email или телефон', 'f.password': 'Пароль', 'f.fullname': 'Полное имя', 'f.phone': 'Номер телефона', 'f.email': 'Email', 'f.company': 'Название компании',
-    'ph.emailphone': 'email@primer.com', 'ph.password': '••••••••', 'ph.fullname': 'Aziz Karimov', 'ph.email': 'email@primer.com', 'ph.createpass': 'Минимум 8 символов', 'ph.company': 'Milliy Savdo ООО',
+    'ph.emailphone': 'email@primer.com', 'ph.password': '••••••••', 'ph.fullname': 'Имя Фамилия', 'ph.email': 'email@primer.com', 'ph.createpass': 'Минимум 8 символов', 'ph.company': 'Milliy Savdo ООО',
     'or': 'или',
     'type.title': 'Выберите тип аккаунта', 'type.sub': 'Выберите подходящий аккаунт. Можно изменить позже.', 'type.personal': 'Личный аккаунт', 'type.personalDesc': 'Для отправки, получения денег и личных расходов.', 'type.business': 'Бизнес-аккаунт', 'type.businessDesc': 'Для платёжных ссылок, аналитики и управления командой.', 'type.next': 'Продолжить',
     'back': 'Назад', 'form.title': 'Создать аккаунт', 'form.terms': 'Я согласен с условиями и политикой конфиденциальности', 'form.btn': 'Создать аккаунт',
@@ -44,5 +48,7 @@ export const AUTH_I18N = {
     'foot.help': 'Нужна помощь?', 'foot.support': 'Поддержка',
     'card.title': 'Подключите карту', 'card.sub': 'Совершайте первый платёж быстрее — или пропустите, вы всегда сможете добавить карту позже.', 'card.connect': 'Подключить', 'card.skip': 'Пропустить', 'card.error': 'Произошла ошибка, попробуйте ещё раз',
     'cardform.number': 'Номер карты', 'cardform.expiry': 'Срок действия', 'cardform.holder': 'Имя владельца', 'cardform.invalid': 'Данные карты неверны. Проверьте и попробуйте снова.', 'cardform.holderPlaceholder': 'ИМЯ ФАМИЛИЯ', 'cardform.err.number': 'Неверный номер карты', 'cardform.err.expiry': 'Неверный или истёкший срок', 'cardform.err.cvv': 'CVV должен содержать 3 цифры', 'cardform.err.holder': 'Введите имя владельца карты',
+    'otp.title': 'Подтвердите код', 'otp.sub': 'Введите 4-значный код, отправленный на ваш номер телефона.', 'otp.codePh': '1234', 'otp.verify': 'Подтвердить', 'otp.resend': 'Отправить код повторно', 'otp.demo': 'Демо-режим — код:', 'otp.sendBtn': 'Отправить код', 'otp.wrongLen': 'Неверный номер телефона',
+    'addemail.title': 'Сохраните ваш email', 'addemail.sub': 'Необязательно, для восстановления доступа — можно добавить сейчас или позже в настройках.', 'addemail.save': 'Сохранить', 'addemail.skip': 'Не сейчас',
   }
 };

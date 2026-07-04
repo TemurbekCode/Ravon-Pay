@@ -38,7 +38,7 @@ export default function Overview() {
   const { t, showToast } = useOutletContext();
   const { user } = useAuth();
   const { revenue, salesCount, avgOrder, baseline, links, customers, transactions, invoices } = useBusiness();
-  const fullName = user?.fullName || 'Aziz Karimov';
+  const fullName = user?.fullName || 'Foydalanuvchi';
   const pendingInvoices = invoices.filter((i) => i.status === 'pending').length;
   const revenuePct = pctChange(revenue, baseline.revenue);
   const salesPct = pctChange(salesCount, baseline.salesCount);

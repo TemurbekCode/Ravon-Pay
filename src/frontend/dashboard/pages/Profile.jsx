@@ -11,9 +11,9 @@ export default function Profile() {
   const [form, setForm] = useState({ fullName: '', phone: '' });
   const [busy, setBusy] = useState(false);
 
-  const name = user?.fullName || 'Aziz Karimov';
-  const email = user?.email || 'aziz@email.com';
-  const phone = user?.phone || '+998 90 123 45 67';
+  const name = user?.fullName || 'Foydalanuvchi';
+  const email = user?.email || '';
+  const phone = user?.phone || '';
 
   const startEdit = () => { setForm({ fullName: name, phone }); setEditing(true); };
 
@@ -38,7 +38,7 @@ export default function Profile() {
           <div className="ph-name">{name}
             <span className="ph-verified"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M20 6 9 17l-5-5" /></svg>{t('profile.verified')}</span>
           </div>
-          <div className="ph-mail">{email}</div>
+          <div className="ph-mail">{phone}</div>
         </div>
         <button className="ph-edit" onClick={startEdit}>{t('profile.edit')}</button>
       </div>
@@ -65,12 +65,11 @@ export default function Profile() {
         <div className="info-card-title">{t('profile.personal')}</div>
         <div className="info-row"><span className="info-label">{t('profile.name')}</span><span className="info-value">{name}</span></div>
         <div className="info-row"><span className="info-label">{t('profile.phone')}</span><span className="info-value">{phone}</span></div>
-        <div className="info-row"><span className="info-label">{t('profile.email')}</span><span className="info-value">{email}</span></div>
+        <div className="info-row"><span className="info-label">{t('profile.email')}</span><span className="info-value">{email || t('email.none')}</span></div>
       </div>
 
       <div className="info-card reveal">
         <div className="info-card-title">{t('profile.security')}</div>
-        <div className="info-row"><span className="info-label">{t('profile.changepass')}</span><span className="info-action">{t('profile.edit')}</span></div>
         <div className="info-row">
           <span className="info-label">{t('profile.2fa')}</span>
           <div className={`toggle-switch ${twoFa ? 'on' : ''}`} onClick={() => setTwoFa((v) => !v)} />

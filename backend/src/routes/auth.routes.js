@@ -5,13 +5,14 @@ import { randomUUID } from 'node:crypto';
 import { db, uid, seedEmptyWalletAndBusiness } from '../db.js';
 import { signToken } from '../authUtil.js';
 import { requireAuth } from '../middleware/requireAuth.js';
+import { getSmsProvider } from '../sms/SmsProvider.js';
 import { ah } from '../asyncHandler.js';
 
 const router = Router();
 
-// Faqat haqiqiy parol taxmin qilish xavfi bo'lgan endpointlarga (register/login/google)
-// qo'llanadi — /me kabi tokenli (allaqachon autentifikatsiyadan o'tgan) so'rovlarga emas,
-// aks holda oddiy foydalanuvchi ilovada faol ishlaganida ham bloklanib qolishi mumkin edi.
+// Faqat haqiqiy parol/kod taxmin qilish xavfi bo'lgan endpointlarga (otp
+// so'rash/tekshirish, google) qo'llanadi — /me kabi tokenli (allaqachon
+// autentifikatsiyadan o'tgan) so'rovlarga emas.
 const bruteForceLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 30,
@@ -20,12 +21,15 @@ const bruteForceLimiter = rateLimit({
   message: { message: "Juda ko'p urinish qilindi, birozdan keyin qayta urinib ko'ring" },
 });
 
+const OTP_TTL_MS = 5 * 60 * 1000;
+const MAX_OTP_ATTEMPTS = 5;
+
 function serializeUser(row) {
   const profiles = JSON.parse(row.profiles);
   return {
     id: row.id,
     fullName: row.full_name,
-    email: row.email,
+    email: row.email || '',
     phone: row.phone || '',
     accountType: row.account_type,
     hasBoth: profiles.length >= 2,
@@ -35,46 +39,70 @@ function serializeUser(row) {
   };
 }
 
-async function findByIdentifier(identifier) {
-  const value = (identifier || '').trim().toLowerCase();
-  return await db.prepare('SELECT * FROM users WHERE LOWER(email) = ? OR phone = ?').get(value, identifier?.trim());
+function generateOtpCode() {
+  return String(Math.floor(1000 + Math.random() * 9000));
 }
 
-router.post('/register', bruteForceLimiter, ah(async (req, res) => {
-  const { accountType, email, phone, fullName, password, companyName } = req.body || {};
-  const acc = accountType === 'business' ? 'business' : 'personal';
+// Ro'yxatdan o'tish/kirish uchun SMS kod so'raydi. `mode: 'register'` bo'lsa
+// telefon allaqachon band bo'lsa xato qaytaradi, `mode: 'login'` bo'lsa
+// aksincha (hisob topilmasa xato). Haqiqiy Eskiz kaliti sozlanmagan bo'lsa,
+// kod javobda `devCode` sifatida qaytariladi (demo rejimi).
+router.post('/otp/request', bruteForceLimiter, ah(async (req, res) => {
+  const { phone, mode } = req.body || {};
+  const cleanPhone = (phone || '').replace(/\D/g, '');
+  if (cleanPhone.length < 9) return res.status(400).json({ message: "Telefon raqami noto'g'ri" });
 
-  if (!email || !fullName || !password) {
-    return res.status(400).json({ message: "Barcha majburiy maydonlarni to'ldiring" });
+  const existing = await db.prepare('SELECT id FROM users WHERE phone = ?').get(cleanPhone);
+  if (mode === 'register' && existing) {
+    return res.status(409).json({ message: 'Bu telefon raqami bilan hisob allaqachon mavjud, kiring' });
   }
-  if (password.length < 6) {
-    return res.status(400).json({ message: "Parol kamida 6 ta belgidan iborat bo'lishi kerak" });
+  if (mode === 'login' && !existing) {
+    return res.status(404).json({ message: "Bu telefon raqami bilan hisob topilmadi, ro'yxatdan o'ting" });
   }
 
-  const existing = await db.prepare('SELECT id FROM users WHERE LOWER(email) = ?').get(email.trim().toLowerCase());
-  if (existing) {
-    return res.status(409).json({ message: 'Bu email bilan hisob allaqachon mavjud' });
-  }
+  const code = generateOtpCode();
+  await db.prepare('INSERT OR REPLACE INTO otp_codes (phone, code, expires_at, attempts) VALUES (?, ?, ?, 0)')
+    .run(cleanPhone, code, Date.now() + OTP_TTL_MS);
 
-  const userId = uid('user');
-  const passwordHash = bcrypt.hashSync(password, 10);
-  await db.prepare(`INSERT INTO users (id, email, phone, password_hash, full_name, company_name, account_type, profiles, role, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-    .run(userId, email.trim().toLowerCase(), phone || '', passwordHash, fullName, acc === 'business' ? (companyName || '') : '', acc, JSON.stringify([acc]), 'user', new Date().toISOString());
-
-  await seedEmptyWalletAndBusiness(userId, fullName, email.trim().toLowerCase());
-
-  const row = await db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
-  res.json({ accessToken: signToken(userId), user: serializeUser(row) });
+  const provider = getSmsProvider();
+  const result = await provider.send(cleanPhone, code);
+  res.json({ sent: true, devCode: result.devCode });
 }));
 
-router.post('/login', bruteForceLimiter, ah(async (req, res) => {
-  const { identifier, password } = req.body || {};
+// Kodni tekshiradi. `mode: 'register'` va hisob hali yo'q bo'lsa — shu yerda
+// yaratiladi (fullName/accountType/companyName shu so'rovda kelishi kerak).
+// Aks holda mavjud hisobga kiritiladi.
+router.post('/otp/verify', bruteForceLimiter, ah(async (req, res) => {
+  const { phone, code, mode, fullName, accountType, companyName } = req.body || {};
+  const cleanPhone = (phone || '').replace(/\D/g, '');
 
-  const row = await findByIdentifier(identifier);
-  if (!row || !bcrypt.compareSync(password || '', row.password_hash)) {
-    return res.status(401).json({ message: "Email/telefon yoki parol noto'g'ri" });
+  const otp = await db.prepare('SELECT * FROM otp_codes WHERE phone = ?').get(cleanPhone);
+  if (!otp || otp.expires_at < Date.now()) {
+    return res.status(400).json({ message: "Kod muddati tugagan, qaytadan so'rang" });
   }
+  if (otp.attempts >= MAX_OTP_ATTEMPTS) {
+    return res.status(400).json({ message: "Juda ko'p noto'g'ri urinish, qaytadan kod so'rang" });
+  }
+  if (otp.code !== (code || '').trim()) {
+    await db.prepare('UPDATE otp_codes SET attempts = attempts + 1 WHERE phone = ?').run(cleanPhone);
+    return res.status(400).json({ message: "Kod noto'g'ri" });
+  }
+  await db.prepare('DELETE FROM otp_codes WHERE phone = ?').run(cleanPhone);
+
+  let row = await db.prepare('SELECT * FROM users WHERE phone = ?').get(cleanPhone);
+  if (!row) {
+    if (mode !== 'register' || !fullName) {
+      return res.status(404).json({ message: "Bu telefon raqami bilan hisob topilmadi" });
+    }
+    const acc = accountType === 'business' ? 'business' : 'personal';
+    const userId = uid('user');
+    await db.prepare(`INSERT INTO users (id, phone, full_name, company_name, account_type, profiles, role, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, 'user', ?)`)
+      .run(userId, cleanPhone, fullName, acc === 'business' ? (companyName || '') : '', acc, JSON.stringify([acc]), new Date().toISOString());
+    await seedEmptyWalletAndBusiness(userId, fullName, '');
+    row = await db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+  }
+
   res.json({ accessToken: signToken(row.id), user: serializeUser(row) });
 }));
 
@@ -106,9 +134,13 @@ router.post('/google', bruteForceLimiter, ah(async (req, res) => {
   if (!row) {
     const userId = uid('user');
     const passwordHash = bcrypt.hashSync(randomUUID(), 10);
+    // Google orqali ro'yxatdan o'tganda ham telefon ustuni unique/NOT NULL —
+    // haqiqiy telefon berilmagani uchun o'ziga xos vaqtinchalik qiymat qo'yiladi,
+    // foydalanuvchi keyin Sozlamalar orqali haqiqiy raqamini kiritishi mumkin.
+    const placeholderPhone = `google-${userId}`;
     await db.prepare(`INSERT INTO users (id, email, phone, password_hash, full_name, company_name, account_type, profiles, role, created_at)
-      VALUES (?, ?, '', ?, ?, '', 'personal', ?, 'user', ?)`)
-      .run(userId, email, passwordHash, profile.name || 'Google User', JSON.stringify(['personal']), new Date().toISOString());
+      VALUES (?, ?, ?, ?, ?, '', 'personal', ?, 'user', ?)`)
+      .run(userId, email, placeholderPhone, passwordHash, profile.name || 'Google User', JSON.stringify(['personal']), new Date().toISOString());
     await seedEmptyWalletAndBusiness(userId, profile.name || 'Google User', email);
     row = await db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
   }
@@ -147,24 +179,26 @@ router.post('/activate-profile', requireAuth, ah(async (req, res) => {
   res.json({ user: serializeUser(row) });
 }));
 
+// fullName/phone'dan tashqari email ham shu yerdan qo'shiladi/o'zgartiriladi/
+// o'chiriladi (birinchi kirishdagi ixtiyoriy taklif yoki Sozlamalar orqali).
+// `email` maydoni so'rovda umuman bo'lmasa — mavjud qiymat saqlanadi; bo'sh
+// qator sifatida yuborilsa — o'chiriladi; qiymat bilan yuborilsa — yangilanadi.
 router.patch('/me', requireAuth, ah(async (req, res) => {
-  const { fullName, phone } = req.body || {};
-  await db.prepare('UPDATE users SET full_name = COALESCE(?, full_name), phone = COALESCE(?, phone) WHERE id = ?')
-    .run(fullName || null, phone ?? null, req.userId);
+  const body = req.body || {};
+  const { fullName, phone } = body;
+  let email = req.dbUser.email;
+  if ('email' in body) {
+    const trimmed = (body.email || '').trim().toLowerCase();
+    if (trimmed) {
+      const existing = await db.prepare('SELECT id FROM users WHERE LOWER(email) = ? AND id != ?').get(trimmed, req.userId);
+      if (existing) return res.status(409).json({ message: 'Bu email boshqa hisobda ishlatilmoqda' });
+    }
+    email = trimmed || null;
+  }
+  await db.prepare('UPDATE users SET full_name = COALESCE(?, full_name), phone = COALESCE(?, phone), email = ? WHERE id = ?')
+    .run(fullName || null, phone ?? null, email, req.userId);
   const row = await db.prepare('SELECT * FROM users WHERE id = ?').get(req.userId);
   res.json({ user: serializeUser(row) });
-}));
-
-router.post('/change-password', requireAuth, bruteForceLimiter, ah(async (req, res) => {
-  const { currentPassword, newPassword } = req.body || {};
-  if (!newPassword || newPassword.length < 6) {
-    return res.status(400).json({ message: "Parol kamida 6 ta belgidan iborat bo'lishi kerak" });
-  }
-  if (!bcrypt.compareSync(currentPassword || '', req.dbUser.password_hash)) {
-    return res.status(400).json({ message: "Joriy parol noto'g'ri" });
-  }
-  await db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(bcrypt.hashSync(newPassword, 10), req.userId);
-  res.json({ ok: true });
 }));
 
 export default router;

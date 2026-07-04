@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../../hooks/useTheme.js';
 import { useLanguage } from '../../../hooks/useLanguage.js';
 import { useAuth } from '../../../hooks/useAuth.js';
-import { authService } from '../../../services/authService.js';
 import { getInitials } from '../../../utils/formatCurrency.js';
 import { ROUTES } from '../../../utils/constants.js';
 
@@ -16,19 +15,19 @@ const LANGS = [
 export default function BizSettingsModal({ show, onClose, t }) {
   const { theme, setTheme } = useTheme();
   const { lang, setLang } = useLanguage();
-  const { user, logout } = useAuth();
+  const { user, logout, updateProfile } = useAuth();
   const navigate = useNavigate();
   const check = <span className="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M20 6 9 17l-5-5" /></svg></span>;
 
-  const name = user?.fullName || 'Aziz Karimov';
-  const email = user?.email || 'aziz@millsavdo.uz';
+  const name = user?.fullName || 'Foydalanuvchi';
+  const phone = user?.phone || '';
 
   const currentLang = LANGS.find((l) => l.code === lang) || LANGS[0];
   const [themeOpen, setThemeOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
-  const [pwOpen, setPwOpen] = useState(false);
-  const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' });
-  const [pwMsg, setPwMsg] = useState('');
+  const [emailOpen, setEmailOpen] = useState(false);
+  const [emailValue, setEmailValue] = useState(user?.email || '');
+  const [emailMsg, setEmailMsg] = useState('');
   const [twoFa, setTwoFa] = useState(true);
   const [push, setPush] = useState(true);
   const [emailNotif, setEmailNotif] = useState(true);
@@ -36,13 +35,21 @@ export default function BizSettingsModal({ show, onClose, t }) {
 
   const goProfile = () => { navigate(ROUTES.profile); onClose(); };
 
-  const submitPassword = async (e) => {
+  const submitEmail = async (e) => {
     e.preventDefault();
-    if (pwForm.next.length < 6) { setPwMsg(t('pw.short')); return; }
-    if (pwForm.next !== pwForm.confirm) { setPwMsg(t('pw.mismatch')); return; }
-    await authService.changePassword({ currentPassword: pwForm.current, newPassword: pwForm.next });
-    setPwMsg(t('pw.success'));
-    setTimeout(() => { setPwOpen(false); setPwMsg(''); setPwForm({ current: '', next: '', confirm: '' }); }, 1400);
+    setEmailMsg('');
+    try {
+      await updateProfile({ email: emailValue });
+      setEmailMsg(t('email.updated'));
+      setTimeout(() => { setEmailOpen(false); setEmailMsg(''); }, 1400);
+    } catch (err) {
+      setEmailMsg(err.message || 'Xatolik yuz berdi');
+    }
+  };
+
+  const removeEmail = async () => {
+    setEmailValue('');
+    await updateProfile({ email: '' });
   };
 
   const handleDelete = () => { logout(); navigate(ROUTES.login); };
@@ -57,22 +64,28 @@ export default function BizSettingsModal({ show, onClose, t }) {
 
         <div className="pd-head clickable" style={{ marginBottom: 20 }} onClick={goProfile}>
           <span className="avatar" style={{ width: 46, height: 46, fontSize: 17 }}>{getInitials(name)}</span>
-          <div><div className="pd-name">{name}</div><div className="pd-mail">{email}</div></div>
+          <div><div className="pd-name">{name}</div><div className="pd-mail">{phone}</div></div>
         </div>
 
         <div className="setting-block">
           <div className="setting-label">{t('set.account')}</div>
-          <button className="pd-item" onClick={() => setPwOpen((v) => !v)}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-            <span>{t('profile.changepass')}</span>
+          <button className="pd-item" onClick={() => setEmailOpen((v) => !v)}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 6-10 7L2 6" /></svg>
+            <span>{user?.email || t('email.none')}</span>
           </button>
-          {pwOpen && (
-            <form className="pw-form" onSubmit={submitPassword}>
-              <div className="biz-field"><label>{t('pw.current')}</label><input type="password" value={pwForm.current} onChange={(e) => setPwForm({ ...pwForm, current: e.target.value })} required /></div>
-              <div className="biz-field"><label>{t('pw.new')}</label><input type="password" value={pwForm.next} onChange={(e) => setPwForm({ ...pwForm, next: e.target.value })} required /></div>
-              <div className="biz-field"><label>{t('pw.confirm')}</label><input type="password" value={pwForm.confirm} onChange={(e) => setPwForm({ ...pwForm, confirm: e.target.value })} required /></div>
-              {pwMsg && <div className={`pw-msg ${pwMsg === t('pw.success') ? 'ok' : ''}`}>{pwMsg}</div>}
-              <button type="submit" className="btn-new" style={{ width: '100%', justifyContent: 'center' }}>{t('pw.submit')}</button>
+          {emailOpen && (
+            <form className="pw-form" onSubmit={submitEmail}>
+              <div className="biz-field">
+                <label>{t('profile.email')}</label>
+                <input type="email" placeholder={t('email.placeholder')} value={emailValue} onChange={(e) => setEmailValue(e.target.value)} />
+              </div>
+              {emailMsg && <div className={`pw-msg ${emailMsg === t('email.updated') ? 'ok' : ''}`}>{emailMsg}</div>}
+              <button type="submit" className="btn-new" style={{ width: '100%', justifyContent: 'center' }}>{t('email.save')}</button>
+              {user?.email && (
+                <button type="button" className="btn-ghost" style={{ width: '100%', justifyContent: 'center', marginTop: 8 }} onClick={removeEmail}>
+                  {t('email.remove')}
+                </button>
+              )}
             </form>
           )}
           <div className="toggle-row">

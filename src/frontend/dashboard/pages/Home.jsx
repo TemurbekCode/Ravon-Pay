@@ -40,7 +40,7 @@ export default function Home() {
   const [contactName, setContactName] = useState('');
   const [contactPhone, setContactPhone] = useState('');
 
-  const fullName = user?.fullName || 'Aziz Karimov';
+  const fullName = user?.fullName || 'Foydalanuvchi';
 
   const totalIn = transactions.filter((tx) => tx.amount > 0).reduce((s, tx) => s + tx.amount, 0);
   const totalOut = transactions.filter((tx) => tx.amount < 0).reduce((s, tx) => s + tx.amount, 0);
