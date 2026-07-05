@@ -11,7 +11,10 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const token = localStorage.getItem('ravonpay_access_token');
     const restore = token
-      ? authService.me().then((res) => setUser(res.user ?? res)).catch(() => localStorage.removeItem('ravonpay_access_token'))
+      ? authService.me().then((res) => setUser(res.user ?? res)).catch(() => {
+          localStorage.removeItem('ravonpay_access_token');
+          localStorage.removeItem('ravonpay_refresh_token');
+        })
       : Promise.resolve();
     restore.finally(() => setLoading(false));
   }, []);

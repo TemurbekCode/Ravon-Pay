@@ -96,7 +96,7 @@ export default function Topbar({ onMenu, onOpenSettings, t }) {
         </div>
       </header>
       <AddBusinessProfileModal show={addProfileOpen} onClose={() => setAddProfileOpen(false)} t={t} />
-      <NotificationsPanel show={notifOpen} onClose={() => setNotifOpen(false)} notifications={notifications} onMarkAllRead={markNotificationsRead} t={t} />
+      <NotificationsPanel show={notifOpen} onClose={() => setNotifOpen(false)} notifications={notifications} onMarkAllRead={markNotificationsRead} onOpenSettings={onOpenSettings} t={t} />
     </>
   );
 }

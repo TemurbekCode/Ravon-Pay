@@ -146,11 +146,6 @@ export default function BizSettingsModal({ show, onClose, t }) {
               <button type="submit" className="btn-new" style={{ width: '100%', justifyContent: 'center' }} disabled={verifyBusy}>{t('verify.submit')}</button>
             </form>
           )}
-          <div className="pd-item pd-item-verify" style={{ opacity: 0.55, cursor: 'not-allowed' }}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M17 8l-5-5-5 5" /><path d="M12 3v12" /></svg>
-            <span className="pd-item-grow">{t('verify.document')}</span>
-            <span className="verify-status none">{t('verify.comingSoon')}</span>
-          </div>
         </div>
 
         <div className="setting-block">

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { API, apiRegister, apiSubscribe, registerPersonal, registerBusiness, randomPhone, setWalletBaseline } from './helpers.js';
+import { API, apiRegister, apiSubscribe, registerPersonal, registerBusiness, loginPersonal, randomPhone, setWalletBaseline } from './helpers.js';
 
 test.describe('Local vs international card (no CVV for local cards)', () => {
   test('a local card can be added without filling CVV', async ({ page }) => {
@@ -138,6 +138,39 @@ test.describe('Send money — P2P by phone vs. card', () => {
   });
 });
 
+test.describe('Login restores the same existing account (regression: it used to silently create a fresh fake one)', () => {
+  test('logging out and back in via /login (not /register) restores the same account, name and balance', async ({ page, request }) => {
+    const phone = await registerPersonal(page, { fullName: 'Persist Test User' });
+    await page.goto('/dashboard', { waitUntil: 'networkidle' });
+    await expect(page.locator('.greet h1')).toContainText('Persist Test User');
+
+    const token = await page.evaluate(() => localStorage.getItem('ravonpay_access_token'));
+    await request.post(`${API}/wallet/topup`, { headers: { Authorization: `Bearer ${token}` }, data: { amount: 77000 } });
+
+    await page.click('.profile-btn');
+    await page.click('.pd-item.danger');
+    await page.waitForURL('**/login', { timeout: 5000 });
+
+    await loginPersonal(page, phone);
+
+    await expect(page).toHaveURL(/\/dashboard/);
+    await expect(page.locator('.greet h1')).toContainText('Persist Test User');
+    await expect(page.locator('.balance-amount')).toContainText('77');
+  });
+
+  test('a new registration notifies phone-only users to add an email, and tapping it opens Settings', async ({ page }) => {
+    await registerPersonal(page, { fullName: 'Email Reminder Test' });
+    await page.goto('/dashboard', { waitUntil: 'networkidle' });
+    await page.click('[aria-label="Notifications"]');
+    await page.waitForTimeout(300);
+    const reminder = page.locator('.notif-item.clickable:has-text("Emailingizni qo\'shing")');
+    await expect(reminder).toBeVisible();
+    await reminder.click();
+    await page.waitForTimeout(300);
+    await expect(page.locator('.modal-overlay.show .modal-head h3')).toContainText('Sozlamalar');
+  });
+});
+
 test.describe('Real monthly balance-change (no more hardcoded "+12.5%")', () => {
   test('the balance-change baseline is real per-user DB data, and the % is computed from it', async ({ request }) => {
     const acc = await apiRegister({ fullName: 'Baseline Test' });
@@ -215,7 +248,7 @@ test.describe('Business "Havola" bottom-nav button', () => {
   });
 });
 
-test.describe('Business document upload (backend fully working, paused in UI)', () => {
+test.describe('Business document upload (backend fully working, no UI entry point yet)', () => {
   test('a valid PDF/image can be uploaded and marks the business as having a document', async ({ request }) => {
     const acc = await apiRegister({ fullName: 'Doc Upload Owner', accountType: 'business', companyName: 'Doc Upload Co' });
     await apiSubscribe(acc.token);
@@ -239,13 +272,5 @@ test.describe('Business document upload (backend fully working, paused in UI)', 
       multipart: { document: { name: 'test.exe', mimeType: 'application/x-msdownload', buffer: Buffer.from('not a real exe') } },
     });
     expect(res.status()).toBe(400);
-  });
-
-  test('the "not available yet" badge is shown in Settings instead of an active uploader', async ({ page }) => {
-    await registerBusiness(page, { companyName: 'Paused UI Co', ownerName: 'Paused UI Owner' });
-    await page.click('.profile-btn');
-    await page.click('.pd-item:has-text("Sozlamalar")');
-    await page.waitForTimeout(400);
-    await expect(page.locator('.pd-item-verify:has-text("Hujjat")')).toContainText('Hozircha mavjud emas');
   });
 });

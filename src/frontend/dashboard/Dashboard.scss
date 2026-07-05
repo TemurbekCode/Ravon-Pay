@@ -195,6 +195,7 @@
   background: var(--bg-secondary);
   border: 1px solid transparent;
   &.unread { background: var(--bg-elevated); border-color: var(--border-strong); }
+  &.clickable { cursor: pointer; transition: border-color 0.18s; &:hover { border-color: var(--border-strong); } }
 }
 .notif-ic {
   width: 38px; height: 38px;

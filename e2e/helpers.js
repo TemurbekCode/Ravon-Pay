@@ -60,6 +60,17 @@ export async function registerPersonal(page, { fullName = 'Test User', phone } =
   return p;
 }
 
+// Mavjud (allaqachon ro'yxatdan o'tgan) hisobga /login orqali kiradi — "Kirish"
+// oqimi haqiqatan HAM XUDDI O'SHA hisobga kiritayotganini tekshirish uchun
+// (registerPersonal bilan chalkashtirmaslik kerak — bu boshqa route/forma).
+export async function loginPersonal(page, phone) {
+  await page.goto('/login', { waitUntil: 'networkidle' });
+  await page.locator('input[type="tel"]').fill(phone);
+  await page.click('button[type="submit"]');
+  await verifyOtpAndSkipEmail(page);
+  await page.waitForTimeout(1000);
+}
+
 // Biznes hisobni ro'yxatdan o'tkazadi va (agar mandatory bo'lsa) test kartasi
 // bilan obunani ham faollashtiradi -> /business.
 export async function registerBusiness(page, { companyName = 'Test Co', ownerName = 'Test Owner', phone, visaSub = true } = {}) {

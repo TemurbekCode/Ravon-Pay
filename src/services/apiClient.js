@@ -4,9 +4,11 @@ import { API_URL } from '../utils/constants.js';
 export const apiClient = axios.create({
   baseURL: API_URL,
   headers: { 'Content-Type': 'application/json' },
-  // Backend hali ishga tushmagan bo'lsa, brauzer ulanish rad etilishini sekin aniqlaydi (bir necha soniya).
-  // Qisqa timeout mock rejimga tezroq o'tishni ta'minlaydi; backend ulanganda kerak bo'lsa oshiriladi.
-  timeout: 2000,
+  // Bepul/kichik hostinglarda backend uxlab qolgan bo'lsa (cold start) uyg'onishi
+  // bir necha o'nlab soniya olishi mumkin — bu ilgari 2000ms edi, shu qisqa muddat
+  // sababli har bir sekinroq javob "tarmoq xatosi" deb noto'g'ri hisoblanardi (auth
+  // uchun bu ayniqsa xavfli edi, quyidagi izohga qarang).
+  timeout: 15000,
 });
 
 // Har so'rovga token qo'shish

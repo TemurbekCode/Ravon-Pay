@@ -541,6 +541,12 @@
   gap: 10px;
   .pd-item-grow { flex: 1; min-width: 0; }
   .verify-status { margin-top: 1px; }
+  // Tor ekranda belgi labelning yoniga emas, pastiga tushadi — aks holda
+  // belgi joy egallab, label uch qatorgacha siqilib yozilib ketardi.
+  @media (max-width: 480px) {
+    flex-wrap: wrap;
+    .verify-status { margin-left: 28px; margin-top: 4px; }
+  }
 }
 
 .content {

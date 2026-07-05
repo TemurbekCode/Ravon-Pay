@@ -6,6 +6,7 @@ import { db, uid, seedEmptyWalletAndBusiness, isFounder } from '../db.js';
 import { issueTokens, rotateRefreshToken, revokeRefreshToken } from '../authUtil.js';
 import { requireAuth } from '../middleware/requireAuth.js';
 import { getSmsProvider } from '../sms/SmsProvider.js';
+import { addNotification } from '../helpers.js';
 import { ah } from '../asyncHandler.js';
 
 const router = Router();
@@ -105,6 +106,11 @@ router.post('/otp/verify', bruteForceLimiter, ah(async (req, res) => {
       .run(userId, cleanPhone, fullName, acc === 'business' ? (companyName || '') : '', acc, JSON.stringify([acc]), new Date().toISOString());
     await seedEmptyWalletAndBusiness(userId, fullName, '');
     row = await db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+    // Faqat telefon bilan ro'yxatdan o'tgan hisoblarning yagona identifikatori —
+    // telefon raqami. Agar shu qurilma/brauzer o'zgarsa yoki tokenlar tozalansa,
+    // hisobga faqat shu raqam orqali qayta kirish mumkin bo'ladi — email qo'shib
+    // qo'yish qo'shimcha, muqobil yo'l beradi.
+    await addNotification(userId, 'Emailingizni qo\'shing', "Siz faqat telefon raqami bilan ro'yxatdan o'tdingiz. Hisobingizga kirishning qo'shimcha yo'li bo'lishi uchun hozir email qo'shib qo'ying — Sozlamalar bo'limidan istalgan vaqtda qo'shishingiz mumkin.", 'email_reminder');
   }
 
   const tokens = await issueTokens(row.id);
