@@ -1,8 +1,7 @@
-import { createContext, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { authService } from '../../services/authService.js';
 import { mockStore } from '../../services/mockStore.js';
-
-export const AuthContext = createContext(null);
+import { AuthContext } from './AuthContext.js';
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -11,11 +10,10 @@ export function AuthProvider({ children }) {
   // Sahifa yangilanganda tokendan foydalanuvchini tiklash
   useEffect(() => {
     const token = localStorage.getItem('ravonpay_access_token');
-    if (!token) { setLoading(false); return; }
-    authService.me()
-      .then((res) => setUser(res.user ?? res))
-      .catch(() => localStorage.removeItem('ravonpay_access_token'))
-      .finally(() => setLoading(false));
+    const restore = token
+      ? authService.me().then((res) => setUser(res.user ?? res)).catch(() => localStorage.removeItem('ravonpay_access_token'))
+      : Promise.resolve();
+    restore.finally(() => setLoading(false));
   }, []);
 
   // Telefon raqamiga SMS kod so'raydi (ro'yxatdan o'tish yoki kirish uchun).

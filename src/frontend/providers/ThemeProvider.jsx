@@ -1,6 +1,5 @@
-import { createContext, useEffect, useState } from 'react';
-
-export const ThemeContext = createContext(null);
+import { useEffect, useState } from 'react';
+import { ThemeContext } from './ThemeContext.js';
 
 export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState(() => localStorage.getItem('ravonpay_theme') || 'dark');

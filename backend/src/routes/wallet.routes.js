@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { db, uid, nowLabel } from '../db.js';
 import { requireAuth } from '../middleware/requireAuth.js';
-import { getWallet, getNotifications, addNotification, nextSortOrder, formatCurrency, creditWallet } from '../helpers.js';
+import { getWallet, getNotifications, addNotification, nextSortOrder, formatCurrency, creditWallet, parsePositiveAmount } from '../helpers.js';
 import { getPaymentProvider } from '../payments/PaymentProvider.js';
 import { reservePaymeOrder } from '../payments/PaymeProvider.js';
 import { reserveClickOrder } from '../payments/ClickProvider.js';
@@ -18,7 +18,8 @@ router.get('/balance', ah(async (req, res) => {
 // joriy demo xatti-harakati o'zgarishsiz qoladi. Payme/Click sozlansa — foydalanuvchi
 // checkout havolasiga yo'naltiriladi, pul webhook orqali keyinroq tasdiqlanadi.
 router.post('/topup', ah(async (req, res) => {
-  const amount = Number(req.body?.amount) || 0;
+  const amount = parsePositiveAmount(req.body?.amount);
+  if (amount === null) return res.status(400).json({ message: "Summa noto'g'ri" });
   const provider = getPaymentProvider();
   const orderId = uid('topup');
 
@@ -34,7 +35,8 @@ router.post('/topup', ah(async (req, res) => {
 }));
 
 router.post('/withdraw', ah(async (req, res) => {
-  const amount = Number(req.body?.amount) || 0;
+  const amount = parsePositiveAmount(req.body?.amount);
+  if (amount === null) return res.status(400).json({ message: "Summa noto'g'ri" });
   const card = await db.prepare('SELECT * FROM cards WHERE id = ? AND user_id = ?').get(req.body?.cardId, req.userId);
   if (!card) return res.status(400).json({ message: 'Karta topilmadi' });
   const w = await db.prepare('SELECT balance FROM wallets WHERE user_id = ?').get(req.userId);

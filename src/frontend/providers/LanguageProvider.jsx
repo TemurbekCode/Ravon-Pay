@@ -1,7 +1,6 @@
-import { createContext, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { translations } from '../../utils/translations.js';
-
-export const LanguageContext = createContext(null);
+import { LanguageContext } from './LanguageContext.js';
 
 export function LanguageProvider({ children }) {
   const [lang, setLang] = useState(() => localStorage.getItem('ravonpay_lang') || 'uz');

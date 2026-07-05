@@ -1,7 +1,5 @@
-import { createContext, useContext, useState, useCallback } from 'react';
-
-const ToastCtx = createContext(null);
-export const useToast = () => useContext(ToastCtx);
+import { useState, useCallback } from 'react';
+import { ToastContext } from './ToastContext.js';
 
 // Toast (xabar) tizimi — o'ng pastda chiqadigan bildirishnomalar
 export function ToastProvider({ children }) {
@@ -18,7 +16,7 @@ export function ToastProvider({ children }) {
   }, []);
 
   return (
-    <ToastCtx.Provider value={{ showToast }}>
+    <ToastContext.Provider value={{ showToast }}>
       {children}
       <div className="toast-wrap">
         {toasts.map((t) => (
@@ -28,6 +26,6 @@ export function ToastProvider({ children }) {
           </div>
         ))}
       </div>
-    </ToastCtx.Provider>
+    </ToastContext.Provider>
   );
 }

@@ -3,7 +3,10 @@ import './src/env.js'; // BIRINCHI import bo'lishi shart — boshqa modullar pro
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import { randomUUID } from 'node:crypto';
 import './src/db.js';
+import { requestLogger } from './src/middleware/requestLogger.js';
 
 import authRoutes from './src/routes/auth.routes.js';
 import cardsRoutes from './src/routes/cards.routes.js';
@@ -23,10 +26,28 @@ const corsOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173').split('
 
 app.use(helmet());
 app.use(cors({ origin: corsOrigins }));
+app.use(requestLogger);
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true })); // Click webhook'i form-urlencoded yuborishi mumkin
 
+// Butun API bo'ylab umumiy himoya — auth.routes.js'dagi bruteForceLimiter bunga
+// QO'SHIMCHA, faqat parol/kod taxmin qilish xavfi bor endpointlarga qattiqroq chek qo'yadi.
+// DISABLE_RATE_LIMIT faqat avtomatik test to'plami (playwright.config.js) uchun
+// ishlatiladi — u bitta IP'dan (localhost) o'nlab "turli foydalanuvchi"ni
+// simulyatsiya qilgani uchun haqiqiy trafikka o'xshamaydi. Oddiy `npm run dev`
+// bilan ishga tushirilganda bu o'zgaruvchi yo'q, demak himoya doim faol.
+const apiLimiter = process.env.DISABLE_RATE_LIMIT === 'true'
+  ? (req, res, next) => next()
+  : rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: 600,
+      standardHeaders: true,
+      legacyHeaders: false,
+      message: { message: "Juda ko'p so'rov yuborildi, birozdan keyin qayta urinib ko'ring" },
+    });
+
 const api = express.Router();
+api.use(apiLimiter);
 api.use('/auth', authRoutes);
 api.use('/cards', cardsRoutes);
 api.use('/wallet', walletRoutes);
@@ -46,10 +67,14 @@ app.use('/webhooks', webhooksRoutes);
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
+// Har bir kutilmagan xatoga qisqa ID beriladi — foydalanuvchiga xato tafsilotlari
+// (stack trace va h.k.) ko'rsatilmaydi, lekin shu ID orqali konsol loglaridan
+// aniq shu hodisani topish mumkin (qo'llab-quvvatlash so'rovlarida foydali).
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
-  console.error(err);
-  res.status(500).json({ message: 'Serverda kutilmagan xatolik yuz berdi' });
+  const errorId = randomUUID().slice(0, 8);
+  console.error(`[${errorId}] ${req.method} ${req.originalUrl}`, err);
+  res.status(500).json({ message: 'Serverda kutilmagan xatolik yuz berdi', errorId });
 });
 
 app.listen(PORT, () => {

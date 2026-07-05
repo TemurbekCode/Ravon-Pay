@@ -6,6 +6,17 @@ export function formatCurrency(amount) {
   return new Intl.NumberFormat('ru-RU').format(Math.round(Math.abs(amount)));
 }
 
+// Pul harakatlanadigan HAR BIR endpoint shu orqali summani o'qishi shart.
+// Manfiy yoki 0 summa (masalan withdraw/send'ga -100000 yuborish) balansni
+// TEKSHIRUVDAN o'tkazib (amount > balance => false) uni oshirib yuborishi
+// mumkin edi — shuning uchun faqat musbat, chekli, butun sonlarga ruxsat beriladi
+// (frontend ham faqat butun so'm kiritadi, kasr kerak emas).
+export function parsePositiveAmount(input) {
+  const n = Number(input);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return Math.floor(n);
+}
+
 export function rowToCard(r) {
   return { id: r.id, variant: r.variant, type: r.type, num: r.num, exp: r.exp, holder: r.holder || '', balance: r.balance, frozen: !!r.frozen };
 }

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { db, uid, nowLabel, isFounder } from '../db.js';
 import { requireAuth } from '../middleware/requireAuth.js';
 import { requireSubscription } from '../middleware/requireSubscription.js';
-import { getBusiness, getNotifications, addNotification, nextSortOrder, formatCurrency, getWallet } from '../helpers.js';
+import { getBusiness, getNotifications, addNotification, nextSortOrder, formatCurrency, getWallet, parsePositiveAmount } from '../helpers.js';
 import { validateCard } from '../cardValidation.js';
 import { ah } from '../asyncHandler.js';
 
@@ -69,7 +69,8 @@ router.get('/balance', ah(async (req, res) => {
 }));
 
 router.post('/withdraw', ah(async (req, res) => {
-  const amount = Number(req.body?.amount) || 0;
+  const amount = parsePositiveAmount(req.body?.amount);
+  if (amount === null) return res.status(400).json({ message: "Summa noto'g'ri" });
   const card = await db.prepare('SELECT * FROM cards WHERE id = ? AND user_id = ?').get(req.body?.cardId, req.userId);
   if (!card) return res.status(400).json({ message: 'Karta topilmadi' });
   const row = await db.prepare('SELECT balance_available FROM businesses WHERE user_id = ?').get(req.userId);
@@ -93,7 +94,8 @@ router.patch('/verification', ah(async (req, res) => {
 
 router.post('/utilities/pay', ah(async (req, res) => {
   const { category, account } = req.body || {};
-  const amount = Number(req.body?.amount) || 0;
+  const amount = parsePositiveAmount(req.body?.amount);
+  if (amount === null) return res.status(400).json({ message: "Summa noto'g'ri" });
   const row = await db.prepare('SELECT balance_available FROM businesses WHERE user_id = ?').get(req.userId);
   if (amount > row.balance_available) return res.status(400).json({ message: 'INSUFFICIENT_BALANCE' });
   await db.prepare('UPDATE businesses SET balance_available = balance_available - ? WHERE user_id = ?').run(amount, req.userId);
@@ -112,7 +114,8 @@ router.get('/invoices', ah(async (req, res) => {
 
 router.post('/invoices', ah(async (req, res) => {
   const { client, due } = req.body || {};
-  const amount = Number(req.body?.amount) || 0;
+  const amount = parsePositiveAmount(req.body?.amount);
+  if (amount === null) return res.status(400).json({ message: "Summa noto'g'ri" });
   const countRow = await db.prepare('SELECT COUNT(*) AS c FROM biz_invoices WHERE user_id = ?').get(req.userId);
   const invoice = { id: uid('inv'), num: `INV-${1043 + countRow.c}`, client, due, amount, status: 'pending' };
   const order = await nextSortOrder('biz_invoices', req.userId);

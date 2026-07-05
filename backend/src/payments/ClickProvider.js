@@ -37,7 +37,7 @@ export const ClickProvider = {
   },
 };
 
-const CLICK_ERROR = { SUCCESS: 0, SIGN_FAILED: -1, ALREADY_PAID: -4, TRANSACTION_NOT_FOUND: -6, ORDER_NOT_FOUND: -5 };
+const CLICK_ERROR = { SUCCESS: 0, SIGN_FAILED: -1, INCORRECT_AMOUNT: -2, ALREADY_PAID: -4, ORDER_NOT_FOUND: -5, TRANSACTION_NOT_FOUND: -6 };
 
 function verifyClickSign(body) {
   const secret = process.env.CLICK_SECRET_KEY;
@@ -59,8 +59,11 @@ export async function handleClickWebhook(body, { onPerform }) {
   const amount = Math.round(Number(body.amount));
 
   if (!isComplete) {
-    const pending = await db.prepare('SELECT user_id FROM provider_transactions WHERE order_id = ? AND provider = ? AND state = 0').get(orderId, 'click');
+    const pending = await db.prepare('SELECT user_id, amount FROM provider_transactions WHERE order_id = ? AND provider = ? AND state = 0').get(orderId, 'click');
     if (!pending) return { error: CLICK_ERROR.ORDER_NOT_FOUND, error_note: 'Buyurtma topilmadi' };
+    // Webhook'dagi summani hech qachon ko'r-ko'rona ishonib bo'lmaydi — checkout
+    // yaratilganda RavonPay o'zi saqlab qo'ygan summaga mos kelishi shart.
+    if (amount !== pending.amount) return { error: CLICK_ERROR.INCORRECT_AMOUNT, error_note: "Summa mos kelmadi" };
     const txId = uid('clord');
     await db.prepare('INSERT INTO provider_transactions (id, provider, user_id, order_id, amount, state, create_time) VALUES (?, ?, ?, ?, ?, 1, ?)')
       .run(String(body.click_trans_id), 'click', pending.user_id, orderId, amount, Date.now());

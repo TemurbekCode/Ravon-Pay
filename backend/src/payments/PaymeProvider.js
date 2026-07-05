@@ -78,8 +78,12 @@ export async function handlePaymeWebhook({ method, params, id }, { onPerform }) 
     // orderId RavonPay tomonida qaysi foydalanuvchiga tegishli ekanligi
     // createTopUpCheckout bosqichida saqlangan bo'lishi kerak (bu yerda
     // soddalik uchun orderId = uid('topup') va oldindan yozib qo'yilgan deb faraz qilinadi).
-    const pending = await db.prepare('SELECT user_id FROM provider_transactions WHERE order_id = ? AND provider = ? AND state = 0').get(orderId, 'payme');
+    const pending = await db.prepare('SELECT user_id, amount FROM provider_transactions WHERE order_id = ? AND provider = ? AND state = 0').get(orderId, 'payme');
     if (!pending) return rpcError(id, ERR.ORDER_NOT_FOUND, "Buyurtma topilmadi yoki muddati tugagan");
+    // Webhook'dagi summani hech qachon ko'r-ko'rona ishonib bo'lmaydi — checkout
+    // yaratilganda RavonPay o'zi saqlab qo'ygan summaga mos kelishi shart,
+    // aks holda (imzo kalitidan qat'i nazar) noto'g'ri summa hisoblanishi mumkin.
+    if (amount !== pending.amount) return rpcError(id, ERR.INVALID_AMOUNT, "Summa mos kelmadi");
     await db.prepare('INSERT INTO provider_transactions (id, provider, user_id, order_id, amount, state, create_time) VALUES (?, ?, ?, ?, ?, 1, ?)')
       .run(params.id, 'payme', pending.user_id, orderId, amount, now);
     return rpcResult(id, { create_time: now, transaction: params.id, state: 1 });

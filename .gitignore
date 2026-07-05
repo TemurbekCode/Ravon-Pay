@@ -21,6 +21,11 @@ backend/data/
 .env.*
 !.env.example
 
+# Playwright test natijalari (avtomatik yaratiladi, commit qilinmaydi)
+/test-results/
+/playwright-report/
+/playwright/.cache/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

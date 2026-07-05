@@ -12,14 +12,17 @@ const router = Router();
 
 // Faqat haqiqiy parol/kod taxmin qilish xavfi bo'lgan endpointlarga (otp
 // so'rash/tekshirish, google) qo'llanadi — /me kabi tokenli (allaqachon
-// autentifikatsiyadan o'tgan) so'rovlarga emas.
-const bruteForceLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 30,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { message: "Juda ko'p urinish qilindi, birozdan keyin qayta urinib ko'ring" },
-});
+// autentifikatsiyadan o'tgan) so'rovlarga emas. DISABLE_RATE_LIMIT haqida
+// server.js'dagi izohga qarang — faqat avtomatik test to'plami uchun.
+const bruteForceLimiter = process.env.DISABLE_RATE_LIMIT === 'true'
+  ? (req, res, next) => next()
+  : rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: 30,
+      standardHeaders: true,
+      legacyHeaders: false,
+      message: { message: "Juda ko'p urinish qilindi, birozdan keyin qayta urinib ko'ring" },
+    });
 
 const OTP_TTL_MS = 5 * 60 * 1000;
 const MAX_OTP_ATTEMPTS = 5;

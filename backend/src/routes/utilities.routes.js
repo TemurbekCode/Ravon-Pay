@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { db, uid, nowLabel } from '../db.js';
 import { requireAuth } from '../middleware/requireAuth.js';
-import { getWallet, getNotifications, addNotification, nextSortOrder, formatCurrency } from '../helpers.js';
+import { getWallet, getNotifications, addNotification, nextSortOrder, formatCurrency, parsePositiveAmount } from '../helpers.js';
 import { ah } from '../asyncHandler.js';
 
 const router = Router();
@@ -9,7 +9,8 @@ router.use(requireAuth);
 
 router.post('/pay', ah(async (req, res) => {
   const { category, account } = req.body || {};
-  const amount = Number(req.body?.amount) || 0;
+  const amount = parsePositiveAmount(req.body?.amount);
+  if (amount === null) return res.status(400).json({ message: "Summa noto'g'ri" });
   const w = await db.prepare('SELECT balance FROM wallets WHERE user_id = ?').get(req.userId);
   if (amount > w.balance) return res.status(400).json({ message: 'INSUFFICIENT_BALANCE' });
   const newBalance = w.balance - amount;
