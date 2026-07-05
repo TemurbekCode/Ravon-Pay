@@ -85,13 +85,25 @@ export async function creditWallet(userId, amount, label = "Hamyon to'ldirildi")
   return newBalance;
 }
 
+// Business bilan bir xil g'oya: har oy boshida balans "baseline"ga qayta
+// o'rnatiladi, shuning uchun Bosh sahifadagi "+X% bu oy" chipi haqiqiy,
+// hisoblangan qiymat bo'ladi (ilgari doim qattiq yozilgan "+12.5%" edi).
+async function rolloverWalletBaseline(userId) {
+  const w = await db.prepare('SELECT balance, baseline_month FROM wallets WHERE user_id = ?').get(userId);
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  if (w.baseline_month === currentMonth) return;
+  await db.prepare('UPDATE wallets SET baseline_balance = ?, baseline_month = ? WHERE user_id = ?').run(w.balance, currentMonth, userId);
+}
+
 export async function getWallet(userId) {
-  const w = await db.prepare('SELECT balance FROM wallets WHERE user_id = ?').get(userId);
+  await rolloverWalletBaseline(userId);
+  const w = await db.prepare('SELECT balance, baseline_balance FROM wallets WHERE user_id = ?').get(userId);
   const cardRows = await db.prepare('SELECT * FROM cards WHERE user_id = ? ORDER BY sort_order ASC').all(userId);
   const txRows = await db.prepare('SELECT * FROM wallet_transactions WHERE user_id = ? ORDER BY sort_order DESC').all(userId);
   const contactRows = await db.prepare('SELECT * FROM contacts WHERE user_id = ? ORDER BY sort_order ASC').all(userId);
   return {
     balance: w?.balance ?? 0,
+    baseline: { balance: w?.baseline_balance ?? 0 },
     cards: cardRows.map(rowToCard),
     transactions: txRows.map(rowToWalletTx),
     contacts: contactRows.map(rowToContact),

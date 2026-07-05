@@ -5,6 +5,7 @@ import { useWallet } from '../../../hooks/useWallet.js';
 import { ROUTES } from '../../../utils/constants.js';
 import { formatCurrency, uzsToUsd } from '../../../utils/formatCurrency.js';
 import { isCardPickerValid } from '../../../utils/cardValidation.js';
+import { pctChange } from '../../../utils/percentChange.js';
 import CardPicker from '../../shared/CardPicker.jsx';
 import CashFlowChart from '../userDashboard/CashFlowChart.jsx';
 
@@ -26,8 +27,9 @@ export default function Home() {
   const { t } = useOutletContext();
   const { user, request2FAChallenge } = useAuth();
   const navigate = useNavigate();
-  const { balance, contacts, transactions, topUp, withdraw, addCard, addContact, cards } = useWallet();
+  const { balance, baseline, contacts, transactions, topUp, withdraw, addCard, addContact, cards } = useWallet();
   const [balanceVisible, setBalanceVisible] = useState(true);
+  const balancePct = pctChange(balance, baseline.balance);
 
   const [action, setAction] = useState(null); // null | 'topup' | 'withdraw'
   const [amount, setAmount] = useState('');
@@ -133,8 +135,10 @@ export default function Home() {
             </div>
           </div>
           <span className="balance-change">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M7 17 17 7m0 0H9m8 0v8" /></svg>
-            {t('bal.change')}
+            {balancePct >= 0
+              ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M7 17 17 7m0 0H9m8 0v8" /></svg>
+              : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M7 7 17 17m0 0v-8m0 8H9" /></svg>}
+            {balancePct >= 0 ? '+' : ''}{balancePct}% {t('bal.changeSuffix')}
           </span>
           <div className="balance-actions">
             <button className="bal-btn" onClick={() => navigate(ROUTES.send)}>

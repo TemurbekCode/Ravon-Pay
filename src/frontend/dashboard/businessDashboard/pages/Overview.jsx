@@ -3,6 +3,8 @@ import { useOutletContext } from 'react-router-dom';
 import { useAuth } from '../../../../hooks/useAuth.js';
 import { useBusiness } from '../../../../hooks/useBusiness.js';
 import { formatCurrency, uzsToUsd } from '../../../../utils/formatCurrency.js';
+import { pctChange, invoiceConversionRate } from '../../../../utils/percentChange.js';
+import { copyToClipboard } from '../../../../utils/clipboard.js';
 import RevenueChart from '../RevenueChart.jsx';
 
 const RANGE_KEYS = { 7: 'chart.7d', 30: 'chart.30d', 12: 'chart.12m' };
@@ -11,12 +13,6 @@ const copyIcon = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
 const linkIcon = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.5 1.5" /><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7L12 19" /></svg>;
 const upArrow = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m18 15-6-6-6 6" /></svg>;
 const downArrow = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m6 9 6 6 6-6" /></svg>;
-
-// Boshlang'ich (seed) qiymatga nisbatan haqiqiy % o'zgarish — faktura to'langanda oshadi.
-function pctChange(current, base) {
-  if (!base) return 0;
-  return Math.round(((current - base) / base) * 1000) / 10;
-}
 
 // Haqiqiy tranzaksiyalar bo'yicha to'lov usullari taqsimoti — karta/hamyon
 // ishlatilishiga qarab o'zgaradi, ma'lumot yo'q bo'lsa hammasi 0%.
@@ -55,6 +51,7 @@ export default function Overview() {
   const revenuePct = pctChange(revenue, baseline.revenue);
   const salesPct = pctChange(salesCount, baseline.salesCount);
   const avgOrderPct = pctChange(avgOrder, baseline.avgOrder);
+  const convRate = invoiceConversionRate(invoices);
   const pay = paymentMethodBreakdown(transactions);
   const nationalLen = (pay.national / 100) * CIRC;
   const intlLen = (pay.intl / 100) * CIRC;
@@ -111,7 +108,7 @@ export default function Overview() {
 
       {/* SMALL KPI ROW */}
       <div className="kpi-row">
-        <div className="kpi-sm reveal"><div className="t"><span className="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg></span></div><div className="n">3.4%</div><div className="c">{t('kpi.conv')}</div></div>
+        <div className="kpi-sm reveal"><div className="t"><span className="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg></span></div><div className="n">{convRate}%</div><div className="c">{t('kpi.conv')}</div></div>
         <div className="kpi-sm reveal"><div className="t"><span className="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /></svg></span></div><div className="n">{customers.length}</div><div className="c">{t('kpi.customers')}</div></div>
         <div className="kpi-sm reveal"><div className="t"><span className="ic">{linkIcon}</span></div><div className="n">{links.length}</div><div className="c">{t('kpi.links')}</div></div>
         <div className="kpi-sm reveal"><div className="t"><span className="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" /><path d="M14 2v6h6" /></svg></span></div><div className="n">{pendingInvoices}</div><div className="c">{t('kpi.invoices')}</div></div>
@@ -178,7 +175,7 @@ export default function Overview() {
                 <div className="link-ic">{linkIcon}</div>
                 <div className="link-info"><div className="link-title">{l.title}</div><div className="link-meta">ravon.pay/c/{l.slug} · {l.uses} {t('links.uses')}</div></div>
                 <div className="link-amt">{formatCurrency(l.amount)}</div>
-                <button className="link-copy" onClick={() => showToast(t('toast.copy'))}>{copyIcon}</button>
+                <button className="link-copy" onClick={async () => { if (await copyToClipboard(`ravon.pay/c/${l.slug}`)) showToast(t('toast.copy')); }}>{copyIcon}</button>
               </div>
             ))}
           </div>

@@ -116,6 +116,20 @@ export async function apiSubscribe(token, plan = 'monthly') {
   }).then((r) => r.json());
 }
 
+// Backend'ning bittagina fayl (backend/data/ravonpay.db) yoki Turso'ga to'g'ridan-to'g'ri
+// ulanadi — vaqtga bog'liq holatlarni (masalan "oy boshi" baseline) haqiqiy vaqtni
+// kutmasdan sinash uchun kerak bo'lganda ishlatiladi.
+async function dbClient() {
+  const { createClient } = await import('@libsql/client');
+  const path = await import('node:path');
+  const { fileURLToPath } = await import('node:url');
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  return createClient({
+    url: process.env.TURSO_DATABASE_URL || `file:${path.join(__dirname, '..', 'backend', 'data', 'ravonpay.db')}`,
+    authToken: process.env.TURSO_AUTH_TOKEN,
+  });
+}
+
 // ravonpay@gmail.com UNIQUE bo'lgani uchun avvalgi test yugurishidan qolgan
 // egalikni birinchi tozalab, keyin shu hisobga ko'chiradi — ikkalasi ATAYLAB
 // BITTA funksiyada, ketma-ketlikni kafolatlash uchun (alohida global-setup
@@ -123,14 +137,7 @@ export async function apiSubscribe(token, plan = 'monthly') {
 // Muvaffaqiyatsiz bo'lsa jim qolmaydi — sinovlar tushunarsiz "role: user"
 // xatosi bilan emas, aniq sababi bilan to'xtaydi.
 export async function becomeFounder(token) {
-  const { createClient } = await import('@libsql/client');
-  const path = await import('node:path');
-  const { fileURLToPath } = await import('node:url');
-  const __dirname = path.dirname(fileURLToPath(import.meta.url));
-  const client = createClient({
-    url: process.env.TURSO_DATABASE_URL || `file:${path.join(__dirname, '..', 'backend', 'data', 'ravonpay.db')}`,
-    authToken: process.env.TURSO_AUTH_TOKEN,
-  });
+  const client = await dbClient();
   await client.execute("UPDATE users SET email = NULL, role = 'user' WHERE LOWER(email) = 'ravonpay@gmail.com'");
   client.close();
 
@@ -140,4 +147,16 @@ export async function becomeFounder(token) {
     body: JSON.stringify({ email: 'ravonpay@gmail.com' }),
   });
   if (!res.ok) throw new Error(`becomeFounder: PATCH /auth/me failed with ${res.status}: ${await res.text()}`);
+}
+
+// Haqiqiy vaqtni (oy o'tishini) kutmasdan "bu oy boshidagi balans"ni sun'iy
+// ravishda o'rnatadi — shu orqali balans-o'zgarish %'i haqiqatan bazadan
+// hisoblanayotganini (qattiq yozilgan qiymat emasligini) tekshirish mumkin.
+export async function setWalletBaseline(phone, balance, month) {
+  const client = await dbClient();
+  await client.execute({
+    sql: 'UPDATE wallets SET baseline_balance = ?, baseline_month = ? WHERE user_id = (SELECT id FROM users WHERE phone = ?)',
+    args: [balance, month, phone],
+  });
+  client.close();
 }

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { API, apiRegister, apiSubscribe, registerPersonal, registerBusiness, randomPhone } from './helpers.js';
+import { API, apiRegister, apiSubscribe, registerPersonal, registerBusiness, randomPhone, setWalletBaseline } from './helpers.js';
 
 test.describe('Local vs international card (no CVV for local cards)', () => {
   test('a local card can be added without filling CVV', async ({ page }) => {
@@ -135,6 +135,36 @@ test.describe('Send money — P2P by phone vs. card', () => {
     });
     expect(res.status()).toBe(200);
     expect((await res.json()).balance).toBe(150000);
+  });
+});
+
+test.describe('Real monthly balance-change (no more hardcoded "+12.5%")', () => {
+  test('the balance-change baseline is real per-user DB data, and the % is computed from it', async ({ request }) => {
+    const acc = await apiRegister({ fullName: 'Baseline Test' });
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    await setWalletBaseline(acc.phone, 100000, currentMonth);
+
+    await request.post(`${API}/wallet/topup`, { headers: { Authorization: `Bearer ${acc.token}` }, data: { amount: 50000 } });
+    const res = await request.get(`${API}/wallet/balance`, { headers: { Authorization: `Bearer ${acc.token}` } }).then((r) => r.json());
+    expect(res.balance).toBe(50000); // yangi hisob 0dan boshlanadi, + 50 000 topup
+    expect(res.baseline.balance).toBe(100000); // sun'iy o'rnatilgan "oy boshi" qiymati o'zgarmadi (-50%)
+  });
+});
+
+test.describe('Real conversion rate (no more hardcoded "3.4%")', () => {
+  test('invoice paid-ratio reflects actual invoice statuses', async ({ request }) => {
+    const acc = await apiRegister({ fullName: 'Conv Rate Owner', accountType: 'business', companyName: 'Conv Rate Co' });
+    await apiSubscribe(acc.token);
+    const headers = { Authorization: `Bearer ${acc.token}` };
+
+    const inv1 = await request.post(`${API}/business/invoices`, { headers, data: { client: 'Client A', due: '2026-08-01', amount: 100000 } }).then((r) => r.json());
+    await request.post(`${API}/business/invoices`, { headers, data: { client: 'Client B', due: '2026-08-01', amount: 100000 } });
+    await request.post(`${API}/business/invoices/${inv1.id}/pay`, { headers });
+
+    const invoices = await request.get(`${API}/business/invoices`, { headers }).then((r) => r.json()).then((d) => d.invoices);
+    expect(invoices).toHaveLength(2);
+    expect(invoices.filter((i) => i.status === 'done')).toHaveLength(1);
+    expect(invoices.filter((i) => i.status === 'pending')).toHaveLength(1);
   });
 });
 

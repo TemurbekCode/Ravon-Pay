@@ -6,6 +6,7 @@ import { WalletContext } from './WalletContext.js';
 
 export function WalletProvider({ children }) {
   const [balance, setBalance] = useState(0);
+  const [baseline, setBaseline] = useState({ balance: 0 });
   const [cards, setCards] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [contacts, setContacts] = useState([]);
@@ -22,6 +23,7 @@ export function WalletProvider({ children }) {
     ])
       .then(([balRes, cardsRes, txRes, contactsRes, notifRes]) => {
         setBalance(balRes.balance ?? 0);
+        setBaseline(balRes.baseline ?? { balance: 0 });
         setCards(cardsRes.cards ?? []);
         setTransactions(txRes.transactions ?? []);
         setContacts(contactsRes.contacts ?? []);
@@ -100,7 +102,7 @@ export function WalletProvider({ children }) {
   };
 
   const value = {
-    balance, cards, transactions, contacts, notifications, loading,
+    balance, baseline, cards, transactions, contacts, notifications, loading,
     send, topUp, withdraw, payUtility, addCard, freezeCard, deleteCard, addContact, markNotificationsRead,
   };
 

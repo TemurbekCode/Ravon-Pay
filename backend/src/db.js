@@ -113,7 +113,9 @@ CREATE TABLE IF NOT EXISTS otp_codes (
 
 CREATE TABLE IF NOT EXISTS wallets (
   user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-  balance INTEGER NOT NULL DEFAULT 0
+  balance INTEGER NOT NULL DEFAULT 0,
+  baseline_balance INTEGER NOT NULL DEFAULT 0,
+  baseline_month TEXT NOT NULL DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS cards (
@@ -240,6 +242,8 @@ for (const col of ['subscription_active INTEGER DEFAULT 0', 'subscription_plan T
 }
 try { await client.execute("ALTER TABLE cards ADD COLUMN holder TEXT DEFAULT ''"); } catch { /* ustun allaqachon mavjud */ }
 try { await client.execute('ALTER TABLE users ADD COLUMN two_fa_enabled INTEGER DEFAULT 0'); } catch { /* ustun allaqachon mavjud */ }
+try { await client.execute('ALTER TABLE wallets ADD COLUMN baseline_balance INTEGER NOT NULL DEFAULT 0'); } catch { /* ustun allaqachon mavjud */ }
+try { await client.execute("ALTER TABLE wallets ADD COLUMN baseline_month TEXT NOT NULL DEFAULT ''"); } catch { /* ustun allaqachon mavjud */ }
 
 // Admin panelga kirish huquqi — founder email'i har doim 'admin' bo'lishi kerak,
 // hisob qachon yoki qaysi usulda (telefon/Google) ro'yxatdan o'tganidan qat'i nazar.
@@ -267,7 +271,7 @@ export function nowLabel() {
 
 // Yangi ro'yxatdan o'tgan foydalanuvchi uchun — hamma narsa NOLDAN boshlanadi.
 export async function seedEmptyWalletAndBusiness(userId, fullName, email) {
-  await db.prepare('INSERT INTO wallets (user_id, balance) VALUES (?, 0)').run(userId);
+  await db.prepare('INSERT INTO wallets (user_id, balance, baseline_balance, baseline_month) VALUES (?, 0, 0, ?)').run(userId, new Date().toISOString().slice(0, 7));
   await db.prepare(`INSERT INTO businesses (user_id, revenue, sales_count, avg_order, baseline_revenue, baseline_sales_count, baseline_avg_order, balance_available, balance_pending, baseline_month)
     VALUES (?, 0, 0, 0, 0, 0, 0, 0, 0, ?)`).run(userId, new Date().toISOString().slice(0, 7));
   const ownerInitials = fullName.split(' ').map((p) => p[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || 'S';

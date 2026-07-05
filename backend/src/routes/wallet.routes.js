@@ -11,7 +11,8 @@ const router = Router();
 router.use(requireAuth);
 
 router.get('/balance', ah(async (req, res) => {
-  res.json({ balance: (await getWallet(req.userId)).balance });
+  const w = await getWallet(req.userId);
+  res.json({ balance: w.balance, baseline: w.baseline });
 }));
 
 // PAYMENT_PROVIDER sozlanmagan bo'lsa (standart) — pul darhol hamyonga tushadi,
