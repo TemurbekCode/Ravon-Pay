@@ -1,28 +1,49 @@
 import { useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { useWallet } from '../../../hooks/useWallet.js';
+import { useAuth } from '../../../hooks/useAuth.js';
 import { ROUTES } from '../../../utils/constants.js';
+import { copyToClipboard } from '../../../utils/clipboard.js';
 
 export default function Receive() {
   const { t } = useOutletContext();
   const { cards } = useWallet();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [requestAmount, setRequestAmount] = useState('');
   const cardNum = cards[0]?.num?.replace(/•/g, '0') || '';
 
-  const copy = () => {
-    navigator.clipboard?.writeText(cardNum.replace(/\s/g, ''));
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const copy = async () => {
+    const ok = await copyToClipboard(cardNum.replace(/\s/g, ''));
+    if (ok) { setCopied(true); setTimeout(() => setCopied(false), 2000); }
   };
 
   const share = async () => {
     const text = `RavonPay orqali pul yuboring: ${cardNum}`;
     if (navigator.share) {
-      try { await navigator.share({ text }); } catch { /* foydalanuvchi bekor qildi */ }
-    } else {
-      navigator.clipboard?.writeText(text);
+      try { await navigator.share({ text }); return; } catch { /* foydalanuvchi bekor qildi */ }
     }
+    await copyToClipboard(text);
+  };
+
+  // "To'lov havolasi" — o'zingizning telefon raqamingiz (va ixtiyoriy summa)ni
+  // Send sahifasiga oldindan to'ldirilgan holda ochadigan havola qiladi, shunda
+  // qarshi tomon faqat tasdiqlab yuborishi kifoya (summani qayta yozib o'tirmaydi).
+  const requestLink = () => {
+    const params = new URLSearchParams({ to: user?.phone || '' });
+    if (requestAmount) params.set('amount', requestAmount);
+    return `${window.location.origin}${ROUTES.send}?${params.toString()}`;
+  };
+
+  const shareRequestLink = async () => {
+    const url = requestLink();
+    if (navigator.share) {
+      try { await navigator.share({ url, text: t('receive.linkShareText') }); return; } catch { /* bekor qilindi */ }
+    }
+    const ok = await copyToClipboard(url);
+    if (ok) { setLinkCopied(true); setTimeout(() => setLinkCopied(false), 2000); }
   };
 
   return (
@@ -54,9 +75,23 @@ export default function Receive() {
               </button>
             </div>
 
+            <div className="field" style={{ textAlign: 'left', marginTop: 18 }}>
+              <label>{t('receive.requestAmount')}</label>
+              <div className="amount-input">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="0"
+                  value={requestAmount}
+                  onChange={(e) => setRequestAmount(e.target.value.replace(/[^0-9]/g, ''))}
+                />
+                <span className="cur-suffix">so'm</span>
+              </div>
+            </div>
+
             <div className="qr-actions">
               <button className="qr-action-btn" onClick={share}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4" /></svg>{t('receive.share')}</button>
-              <button className="qr-action-btn" onClick={copy}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.5 1.5" /><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7L12 19" /></svg>{t('receive.link')}</button>
+              <button className="qr-action-btn" onClick={shareRequestLink}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.5 1.5" /><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7L12 19" /></svg>{linkCopied ? t('receive.copied') : t('receive.link')}</button>
             </div>
           </>
         ) : (

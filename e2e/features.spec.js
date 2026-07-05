@@ -138,6 +138,32 @@ test.describe('Send money — P2P by phone vs. card', () => {
   });
 });
 
+test.describe('Payment request link (Receive → prefilled Send)', () => {
+  test('opening a shared request link prefills recipient/amount, and sending completes the transfer', async ({ page, request }) => {
+    // Haqiqiy O'zbekiston raqamlari 9 xonali (+998 dan keyin) — Send sahifasidagi
+    // telefon maydoni ham shu uzunlikka cheklangan, shuning uchun test raqami
+    // ham aynan shu formatda bo'lishi kerak (aks holda oxirgi raqam kesilib,
+    // qidiruv mos kelmay qoladi).
+    const receiverPhone = randomPhone().slice(-9);
+    const receiver = await apiRegister({ phone: receiverPhone, fullName: 'Request Receiver' });
+    const sender = await apiRegister({ fullName: 'Request Sender' });
+    await request.post(`${API}/wallet/topup`, { headers: { Authorization: `Bearer ${sender.token}` }, data: { amount: 200000 } });
+
+    await page.goto('/dashboard', { waitUntil: 'networkidle' });
+    await page.evaluate((tok) => localStorage.setItem('ravonpay_access_token', tok), sender.token);
+    await page.goto(`/dashboard/send?to=${receiverPhone}&amount=15000`, { waitUntil: 'networkidle' });
+
+    await expect(page.locator('.phone-input-wrap input')).toHaveValue(receiverPhone);
+    await expect(page.locator('.amount-input input')).toHaveValue('15000');
+
+    await page.click('.form-panel-page button[type="submit"]');
+    await page.waitForTimeout(500);
+
+    const receiverWallet = await request.get(`${API}/wallet/balance`, { headers: { Authorization: `Bearer ${receiver.token}` } }).then((r) => r.json());
+    expect(receiverWallet.balance).toBe(15000);
+  });
+});
+
 test.describe('Business "Havola" bottom-nav button', () => {
   test('opens the real create-link modal (not a placeholder toast) and adds the link', async ({ page }) => {
     // Pastki navigatsiya (bottom-nav) faqat mobil kenglikda ko'rinadi (Business.scss,

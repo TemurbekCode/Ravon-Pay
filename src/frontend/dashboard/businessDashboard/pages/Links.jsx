@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useBusiness } from '../../../../hooks/useBusiness.js';
 import { formatCurrency } from '../../../../utils/formatCurrency.js';
+import { copyToClipboard } from '../../../../utils/clipboard.js';
 import CreateItemModal from '../CreateItemModal.jsx';
 
 const linkIcon = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.5 1.5" /><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7L12 19" /></svg>;
@@ -11,6 +12,11 @@ export default function Links() {
   const { t, showToast } = useOutletContext();
   const { links, createLink } = useBusiness();
   const [modalOpen, setModalOpen] = useState(false);
+
+  const copyLink = async (slug) => {
+    const ok = await copyToClipboard(`ravon.pay/c/${slug}`);
+    if (ok) showToast(t('toast.copy'));
+  };
 
   return (
     <>
@@ -25,7 +31,7 @@ export default function Links() {
               <div className="link-ic">{linkIcon}</div>
               <div className="link-info"><div className="link-title">{l.title}</div><div className="link-meta">ravon.pay/c/{l.slug} · {l.uses} {t('links.uses')}</div></div>
               <div className="link-amt">{formatCurrency(l.amount)}</div>
-              <button className="link-copy" onClick={() => showToast(t('toast.copy'))}>{copyIcon}</button>
+              <button className="link-copy" onClick={() => copyLink(l.slug)}>{copyIcon}</button>
             </div>
           ))}
         </div>

@@ -1,15 +1,26 @@
 import { useState } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { useOutletContext, useSearchParams } from 'react-router-dom';
 import { useWallet } from '../../../hooks/useWallet.js';
 import { formatCurrency } from '../../../utils/formatCurrency.js';
 import { formatCardNumber, isCardNumberValid } from '../../../utils/cardValidation.js';
 
 const EMPTY_FORM = { recipientType: 'phone', recipient: '', amount: '' };
 
+// "To'lov havolasi" orqali (Receive sahifasidan) kelingan bo'lsa, ?to= va
+// ?amount= parametrlari formani oldindan to'ldiradi — qarshi tomon summani
+// qayta yozib o'tirmaydi, faqat tekshirib yuborishi kifoya.
+function formFromParams(searchParams) {
+  const to = searchParams.get('to');
+  if (!to) return EMPTY_FORM;
+  const amount = (searchParams.get('amount') || '').replace(/\D/g, '');
+  return { recipientType: 'phone', recipient: to.replace(/\D/g, '').slice(0, 9), amount };
+}
+
 export default function Send() {
   const { t } = useOutletContext();
   const { balance, contacts, send } = useWallet();
-  const [form, setForm] = useState(EMPTY_FORM);
+  const [searchParams] = useSearchParams();
+  const [form, setForm] = useState(() => formFromParams(searchParams));
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
