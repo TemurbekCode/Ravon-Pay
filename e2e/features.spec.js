@@ -138,6 +138,59 @@ test.describe('Send money — P2P by phone vs. card', () => {
   });
 });
 
+test.describe('Swipe navigation between dashboard pages', () => {
+  const swipe = (page, fromX, toX) => page
+    .dispatchEvent('.content', 'touchstart', { touches: [{ clientX: fromX, clientY: 400, identifier: 0 }] })
+    .then(() => page.dispatchEvent('.content', 'touchend', { changedTouches: [{ clientX: toX, clientY: 400, identifier: 0 }] }));
+
+  test('personal: swiping left/right moves Home -> History -> Cards -> Settings modal -> back', async ({ page }) => {
+    await registerPersonal(page, { fullName: 'Swipe Test' });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/dashboard', { waitUntil: 'networkidle' });
+
+    await swipe(page, 300, 30);
+    await expect(page).toHaveURL(/\/dashboard\/history$/);
+
+    await swipe(page, 300, 30);
+    await expect(page).toHaveURL(/\/dashboard\/cards$/);
+
+    await swipe(page, 300, 30); // Sozlamalar bekati -> haqiqiy sahifa emas, modal ochilishi kerak
+    await page.waitForTimeout(300);
+    await expect(page.locator('.modal-overlay.show .modal-head h3')).toContainText('Sozlamalar');
+    await expect(page).toHaveURL(/\/dashboard\/cards$/); // URL o'zgarmagan, modal ustidan ochilgan
+
+    await page.click('.modal-overlay.show .modal-close');
+    await swipe(page, 30, 300);
+    await expect(page).toHaveURL(/\/dashboard\/history$/);
+  });
+
+  test('business: swiping left/right moves Overview -> Transactions -> Customers -> Settings modal', async ({ page }) => {
+    await registerBusiness(page, { companyName: 'Swipe Test Co' });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/business', { waitUntil: 'networkidle' });
+
+    await swipe(page, 300, 30);
+    await expect(page).toHaveURL(/\/business\/transactions$/);
+
+    await swipe(page, 300, 30);
+    await expect(page).toHaveURL(/\/business\/customers$/);
+
+    await swipe(page, 300, 30);
+    await page.waitForTimeout(300);
+    await expect(page.locator('.modal-overlay.show .modal-head h3')).toContainText('Sozlamalar');
+  });
+
+  test('a short/mostly-vertical touch is ignored (does not misfire as a swipe)', async ({ page }) => {
+    await registerPersonal(page, { fullName: 'Swipe Ignore Test' });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/dashboard', { waitUntil: 'networkidle' });
+
+    await swipe(page, 300, 270); // atigi 30px, chegaradan kam
+    await page.waitForTimeout(200);
+    await expect(page).toHaveURL(/\/dashboard$/);
+  });
+});
+
 test.describe('Login restores the same existing account (regression: it used to silently create a fresh fake one)', () => {
   test('logging out and back in via /login (not /register) restores the same account, name and balance', async ({ page, request }) => {
     const phone = await registerPersonal(page, { fullName: 'Persist Test User' });

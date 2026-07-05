@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { useReveal } from '../../hooks/useReveal.js';
+import { useSwipeNav } from '../../hooks/useSwipeNav.js';
+import { ROUTES } from '../../utils/constants.js';
 import { DASH_I18N } from './dashboard.i18n.js';
 import { WalletProvider } from '../providers/WalletProvider.jsx';
 
@@ -10,6 +12,17 @@ import Topbar from './userDashboard/Topbar.jsx';
 import BottomNav from './userDashboard/BottomNav.jsx';
 import SettingsModal from './userDashboard/SettingsModal.jsx';
 import './Dashboard.scss';
+
+// Instagram-uslubidagi yon-surish tartibi — markazdagi "Yuborish" FAB tugmasi
+// bu ketma-ketlikka kirmaydi (u alohida amal, "sahifa" emas). "Sozlamalar"
+// haqiqiy marshrut emas, shuning uchun { modal: true } — swipe unga yetganda
+// modal ochiladi, navigate() emas.
+const SWIPE_STOPS = [
+  { route: ROUTES.dashboard },
+  { route: ROUTES.history },
+  { route: ROUTES.cards },
+  { modal: true },
+];
 
 /**
  * Dashboard qobig'i — sidebar, topbar, bottom nav, settings modal.
@@ -20,6 +33,7 @@ function DashboardShell() {
   const { pathname } = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const swipeHandlers = useSwipeNav(SWIPE_STOPS, () => setSettingsOpen(true));
 
   useReveal([pathname]);
 
@@ -40,7 +54,7 @@ function DashboardShell() {
 
       <main className="main">
         <Topbar onMenu={() => setSidebarOpen(true)} onOpenSettings={() => setSettingsOpen(true)} t={t} />
-        <div className="content">
+        <div className="content" {...swipeHandlers}>
           {/* Ichki sahifaga 't' ni context orqali emas, Outlet context bilan beramiz */}
           <Outlet context={{ t }} />
         </div>

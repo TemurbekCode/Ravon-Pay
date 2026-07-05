@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../../../hooks/useLanguage.js';
 import { useReveal } from '../../../hooks/useReveal.js';
+import { useSwipeNav } from '../../../hooks/useSwipeNav.js';
 import { useBusiness } from '../../../hooks/useBusiness.js';
 import { useAuth } from '../../../hooks/useAuth.js';
 import { useToast } from '../../../hooks/useToast.js';
@@ -18,6 +19,15 @@ import UpgradeProModal from './UpgradeProModal.jsx';
 import CreateItemModal from './CreateItemModal.jsx';
 import './Business.scss';
 
+// Shaxsiy tomondagi bilan bir xil naqsh — markazdagi "Havola" FAB bu ketma-
+// ketlikka kirmaydi, "Sozlamalar" esa modal ({ modal: true }).
+const BIZ_SWIPE_STOPS = [
+  { route: BIZ_ROUTES.overview },
+  { route: BIZ_ROUTES.tx },
+  { route: BIZ_ROUTES.customers },
+  { modal: true },
+];
+
 // Ichki qobiq (Toast context ichida bo'lishi kerak)
 function BusinessShell() {
   const { lang } = useLanguage();
@@ -30,6 +40,7 @@ function BusinessShell() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [newLinkOpen, setNewLinkOpen] = useState(false);
+  const swipeHandlers = useSwipeNav(BIZ_SWIPE_STOPS, () => setSettingsOpen(true));
 
   useReveal([pathname]);
 
@@ -72,7 +83,7 @@ function BusinessShell() {
       <div className={`overlay ${sidebarOpen ? 'show' : ''}`} onClick={closeSidebar} />
       <main className="main">
         <BizTopbar onMenu={() => setSidebarOpen(true)} onOpenSettings={() => setSettingsOpen(true)} showToast={showToast} t={t} />
-        <div className="content">
+        <div className="content" {...swipeHandlers}>
           <Outlet context={{ t, showToast }} />
         </div>
       </main>
