@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { API, apiRegister, apiSubscribe, registerPersonal, registerBusiness } from './helpers.js';
+import { API, apiRegister, apiSubscribe, registerPersonal, registerBusiness, randomPhone } from './helpers.js';
 
 test.describe('Local vs international card (no CVV for local cards)', () => {
   test('a local card can be added without filling CVV', async ({ page }) => {
@@ -93,6 +93,69 @@ test.describe('Two-factor step-up on withdraw', () => {
       headers: { Authorization: `Bearer ${acc.token}` }, data: { amount: 50000, cardId: card.id },
     });
     expect(res.status()).toBe(200);
+  });
+});
+
+test.describe('Send money — P2P by phone vs. card', () => {
+  test('sending by phone to a registered RavonPay user credits their wallet in real time', async ({ request }) => {
+    const sender = await apiRegister({ fullName: 'Send Sender' });
+    const receiver = await apiRegister({ fullName: 'Send Receiver' });
+    await request.post(`${API}/wallet/topup`, { headers: { Authorization: `Bearer ${sender.token}` }, data: { amount: 200000 } });
+
+    const res = await request.post(`${API}/transactions/send`, {
+      headers: { Authorization: `Bearer ${sender.token}` },
+      data: { recipient: receiver.phone, recipientType: 'phone', amount: 50000 },
+    });
+    expect(res.status()).toBe(200);
+    expect((await res.json()).balance).toBe(150000);
+
+    const receiverWallet = await request.get(`${API}/wallet/balance`, { headers: { Authorization: `Bearer ${receiver.token}` } }).then((r) => r.json());
+    expect(receiverWallet.balance).toBe(50000);
+  });
+
+  test('sending by phone to a number not registered on RavonPay is rejected', async ({ request }) => {
+    const sender = await apiRegister({ fullName: 'Send Nowhere' });
+    await request.post(`${API}/wallet/topup`, { headers: { Authorization: `Bearer ${sender.token}` }, data: { amount: 200000 } });
+
+    const res = await request.post(`${API}/transactions/send`, {
+      headers: { Authorization: `Bearer ${sender.token}` },
+      data: { recipient: randomPhone().slice(-9), recipientType: 'phone', amount: 50000 },
+    });
+    expect(res.status()).toBe(404);
+    expect((await res.json()).message).toBe('RECIPIENT_NOT_FOUND');
+  });
+
+  test('sending by card is a payout-style transfer that works with the mock provider', async ({ request }) => {
+    const sender = await apiRegister({ fullName: 'Send By Card' });
+    await request.post(`${API}/wallet/topup`, { headers: { Authorization: `Bearer ${sender.token}` }, data: { amount: 200000 } });
+
+    const res = await request.post(`${API}/transactions/send`, {
+      headers: { Authorization: `Bearer ${sender.token}` },
+      data: { recipient: '4111111111111111', recipientType: 'card', amount: 50000 },
+    });
+    expect(res.status()).toBe(200);
+    expect((await res.json()).balance).toBe(150000);
+  });
+});
+
+test.describe('Business "Havola" bottom-nav button', () => {
+  test('opens the real create-link modal (not a placeholder toast) and adds the link', async ({ page }) => {
+    // Pastki navigatsiya (bottom-nav) faqat mobil kenglikda ko'rinadi (Business.scss,
+    // max-width: 860px) — aynan foydalanuvchi skrinshotlaridagi ko'rinish.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await registerBusiness(page, { companyName: 'Havola Nav Co' });
+    await page.click('.bn-item.center');
+    await page.waitForTimeout(300);
+
+    const modal = page.locator('.modal-overlay.show .modal');
+    await expect(modal).toBeVisible();
+    await modal.locator('input').first().fill('Nav Test Link');
+    await modal.locator('input').nth(1).fill('75000');
+    await modal.locator('button[type="submit"]').click();
+    await page.waitForTimeout(500);
+
+    await expect(page).toHaveURL(/\/business\/links$/);
+    await expect(page.locator('.link-card:has-text("Nav Test Link")')).toBeVisible();
   });
 });
 

@@ -7,6 +7,7 @@ import { useAuth } from '../../../hooks/useAuth.js';
 import { useToast } from '../../../hooks/useToast.js';
 import { ROUTES } from '../../../utils/constants.js';
 import { BIZ_I18N } from './business.i18n.js';
+import { BIZ_ROUTES } from './business.routes.js';
 import { ToastProvider } from './ToastContext.jsx';
 import { BusinessProvider } from '../../providers/BusinessProvider.jsx';
 import BizSidebar from './BizSidebar.jsx';
@@ -14,6 +15,7 @@ import BizTopbar from './BizTopbar.jsx';
 import BizBottomNav from './BizBottomNav.jsx';
 import BizSettingsModal from './BizSettingsModal.jsx';
 import UpgradeProModal from './UpgradeProModal.jsx';
+import CreateItemModal from './CreateItemModal.jsx';
 import './Business.scss';
 
 // Ichki qobiq (Toast context ichida bo'lishi kerak)
@@ -21,18 +23,27 @@ function BusinessShell() {
   const { lang } = useLanguage();
   const { showToast } = useToast();
   const { pathname } = useLocation();
-  const { subscription, subscribe, cards, loading } = useBusiness();
+  const { subscription, subscribe, cards, createLink, loading } = useBusiness();
   const { profiles, activateProfile, switchAccount } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [newLinkOpen, setNewLinkOpen] = useState(false);
 
   useReveal([pathname]);
 
   const t = (key) => BIZ_I18N[lang]?.[key] ?? BIZ_I18N.uz[key] ?? key;
   const closeSidebar = () => setSidebarOpen(false);
-  const newLink = () => showToast(t('toast.new'));
+  const newLink = () => setNewLinkOpen(true);
+
+  // Havola qaysi sahifadan yaratilgan bo'lishidan qat'i nazar, natijani darhol
+  // ko'rsatish uchun Havolalar sahifasiga o'tkaziladi.
+  const handleCreateLink = async (v) => {
+    await createLink(v.title, Number(v.amount));
+    navigate(BIZ_ROUTES.links);
+    showToast(t('links.created'));
+  };
 
   const handleUpgrade = async (plan, cardPayload) => {
     await subscribe(plan, cardPayload);
@@ -68,6 +79,18 @@ function BusinessShell() {
       <BizBottomNav onOpenSettings={() => setSettingsOpen(true)} onNewLink={newLink} t={t} />
       <BizSettingsModal show={settingsOpen} onClose={() => setSettingsOpen(false)} t={t} />
       <UpgradeProModal show={upgradeOpen} onClose={() => setUpgradeOpen(false)} onSubscribe={handleUpgrade} currentPlan={subscription.plan} cards={cards} t={t} />
+      <CreateItemModal
+        t={t}
+        show={newLinkOpen}
+        onClose={() => setNewLinkOpen(false)}
+        title={t('links.new')}
+        submitLabel={t('links.new')}
+        fields={[
+          { name: 'title', label: t('links.name') },
+          { name: 'amount', label: t('th.amount'), type: 'number', placeholder: '0' },
+        ]}
+        onSubmit={handleCreateLink}
+      />
     </div>
   );
 }

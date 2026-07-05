@@ -44,7 +44,7 @@ export const paymentService = {
     try {
       return await apiClient.post('/transactions/send', data);
     } catch (err) {
-      if (isNetworkError(err)) return mockStore.applySend(data.recipient, data.amount);
+      if (isNetworkError(err)) return mockStore.applySend(data.recipient, data.amount, data.recipientType);
       throw err;
     }
   },

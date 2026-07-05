@@ -30,8 +30,8 @@ export function WalletProvider({ children }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const send = async (recipient, amount) => {
-    const res = await paymentService.send({ recipient, amount });
+  const send = async (recipient, amount, recipientType) => {
+    const res = await paymentService.send({ recipient, amount, recipientType });
     setBalance(res.balance);
     setTransactions(res.transactions);
     setNotifications(res.notifications ?? []);

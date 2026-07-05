@@ -237,11 +237,15 @@ function applyWithdraw(amount, cardId, twoFaCode) {
   return { ...w, notifications: getNotifications() };
 }
 
-function applySend(recipient, amount) {
+// Offline zaxira rejimida boshqa foydalanuvchilarning ma'lumotlari mavjud emas
+// (har biri o'z brauzerida alohida saqlanadi), shuning uchun P2P qidiruv qila
+// olmaydi — faqat chiqimni qayd qiladi (backend ulanganda haqiqiy tekshiruv ishlaydi).
+function applySend(recipient, amount, recipientType = 'phone') {
   const w = readWallet();
   if (amount > w.balance) throw new Error('INSUFFICIENT_BALANCE');
   w.balance -= amount;
-  w.transactions = [{ id: uid('tx'), type: 'out', name: `${recipient} ga o'tkazma`, date: nowLabel(), status: 'done', amount: -amount }, ...w.transactions];
+  const label = recipientType === 'card' ? `${recipient} kartasiga o'tkazma` : `${recipient} ga o'tkazma`;
+  w.transactions = [{ id: uid('tx'), type: 'out', name: label, date: nowLabel(), status: 'done', amount: -amount }, ...w.transactions];
   writeWallet(w);
   addNotification('Pul yuborildi', `${recipient}ga ${formatCurrency(amount)} so'm yuborildi. Balans: ${formatCurrency(w.balance)} so'm`, 'out');
   return { ...w, notifications: getNotifications() };

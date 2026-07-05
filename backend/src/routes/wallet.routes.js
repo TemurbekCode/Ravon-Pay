@@ -46,11 +46,20 @@ router.post('/withdraw', ah(async (req, res) => {
   if (!card) return res.status(400).json({ message: 'Karta topilmadi' });
   const w = await db.prepare('SELECT balance FROM wallets WHERE user_id = ?').get(req.userId);
   if (amount > w.balance) return res.status(400).json({ message: 'INSUFFICIENT_BALANCE' });
+
+  const provider = getPaymentProvider();
+  let payout;
+  try {
+    payout = await provider.createPayout({ userId: req.userId, amount, card });
+  } catch (err) {
+    return res.status(400).json({ message: err.message });
+  }
+
   const newBalance = w.balance - amount;
   await db.prepare('UPDATE wallets SET balance = ? WHERE user_id = ?').run(newBalance, req.userId);
   const order = await nextSortOrder('wallet_transactions', req.userId);
   await db.prepare('INSERT INTO wallet_transactions (id, user_id, type, name, date, status, amount, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-    .run(uid('tx'), req.userId, 'out', `${card.num} kartasiga yechildi`, nowLabel(), 'done', -amount, order);
+    .run(uid('tx'), req.userId, 'out', `${card.num} kartasiga yechildi`, nowLabel(), payout.status === 'done' ? 'done' : 'pending', -amount, order);
   await addNotification(req.userId, 'Pul yechildi', `-${formatCurrency(amount)} so'm ${card.num} kartangizga yechib olindi. Balans: ${formatCurrency(newBalance)} so'm`, 'out');
   res.json({ ...(await getWallet(req.userId)), notifications: await getNotifications(req.userId) });
 }));
