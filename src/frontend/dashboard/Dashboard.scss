@@ -452,6 +452,9 @@
   border-radius: var(--radius-lg);
   padding: 24px;
   min-width: 0;
+  // Tor ekranda burchaklar ancha yumaloqroq — ilgari hamma joyda bir xil
+  // 22px edi, mobil kartalarda bu "hunuk" (juda kvadrat) ko'rinar edi.
+  @media (max-width: 768px) { border-radius: 50px; }
 }
 .panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; gap: 12px; flex-wrap: wrap; }
 .panel-title { font-family: var(--font-display); font-size: 17px; font-weight: 600; }
