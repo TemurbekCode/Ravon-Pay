@@ -2,7 +2,7 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import rateLimit from 'express-rate-limit';
 import { randomUUID } from 'node:crypto';
-import { db, uid, seedEmptyWalletAndBusiness } from '../db.js';
+import { db, uid, seedEmptyWalletAndBusiness, isFounder } from '../db.js';
 import { signToken } from '../authUtil.js';
 import { requireAuth } from '../middleware/requireAuth.js';
 import { getSmsProvider } from '../sms/SmsProvider.js';
@@ -139,8 +139,8 @@ router.post('/google', bruteForceLimiter, ah(async (req, res) => {
     // foydalanuvchi keyin Sozlamalar orqali haqiqiy raqamini kiritishi mumkin.
     const placeholderPhone = `google-${userId}`;
     await db.prepare(`INSERT INTO users (id, email, phone, password_hash, full_name, company_name, account_type, profiles, role, created_at)
-      VALUES (?, ?, ?, ?, ?, '', 'personal', ?, 'user', ?)`)
-      .run(userId, email, placeholderPhone, passwordHash, profile.name || 'Google User', JSON.stringify(['personal']), new Date().toISOString());
+      VALUES (?, ?, ?, ?, ?, '', 'personal', ?, ?, ?)`)
+      .run(userId, email, placeholderPhone, passwordHash, profile.name || 'Google User', JSON.stringify(['personal']), isFounder(email) ? 'admin' : 'user', new Date().toISOString());
     await seedEmptyWalletAndBusiness(userId, profile.name || 'Google User', email);
     row = await db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
   }
@@ -195,8 +195,8 @@ router.patch('/me', requireAuth, ah(async (req, res) => {
     }
     email = trimmed || null;
   }
-  await db.prepare('UPDATE users SET full_name = COALESCE(?, full_name), phone = COALESCE(?, phone), email = ? WHERE id = ?')
-    .run(fullName || null, phone ?? null, email, req.userId);
+  await db.prepare("UPDATE users SET full_name = COALESCE(?, full_name), phone = COALESCE(?, phone), email = ?, role = CASE WHEN ? = 1 THEN 'admin' ELSE role END WHERE id = ?")
+    .run(fullName || null, phone ?? null, email, isFounder(email) ? 1 : 0, req.userId);
   const row = await db.prepare('SELECT * FROM users WHERE id = ?').get(req.userId);
   res.json({ user: serializeUser(row) });
 }));

@@ -33,10 +33,21 @@ import BizTeam from '../frontend/dashboard/businessDashboard/pages/Team.jsx';
 import BizExchange from '../frontend/dashboard/businessDashboard/pages/Exchange.jsx';
 import BizUtilities from '../frontend/dashboard/businessDashboard/pages/Utilities.jsx';
 
+// Admin panel (asoschining shaxsiy paneli)
+import AdminDashboard from '../frontend/admin/AdminDashboard.jsx';
+
 function Protected({ children }) {
   const { isAuthenticated, loading } = useAuth();
   if (loading) return <div style={{ display: 'grid', placeItems: 'center', minHeight: '100vh' }}>Yuklanmoqda...</div>;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
+  return children;
+}
+
+function AdminProtected({ children }) {
+  const { isAuthenticated, loading, user } = useAuth();
+  if (loading) return <div style={{ display: 'grid', placeItems: 'center', minHeight: '100vh' }}>Yuklanmoqda...</div>;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (user?.role !== 'admin') return <Navigate to="/dashboard" replace />;
   return children;
 }
 
@@ -77,6 +88,9 @@ export default function AppRouter() {
         <Route path="exchange" element={<BizExchange />} />
         <Route path="utilities" element={<BizUtilities />} />
       </Route>
+
+      {/* Admin panel (faqat role='admin') */}
+      <Route path="/admin" element={<AdminProtected><AdminDashboard /></AdminProtected>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

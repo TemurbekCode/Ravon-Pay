@@ -18,6 +18,7 @@ export const ROUTES = {
   aiAdviser: '/dashboard/ai-adviser',
   settings: '/dashboard/settings',
   profile: '/dashboard/profile',
+  admin: '/admin',
 };
 
 export const ACCOUNT_TYPES = { PERSONAL: 'personal', BUSINESS: 'business' };

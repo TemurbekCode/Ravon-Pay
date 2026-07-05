@@ -13,6 +13,7 @@ import contactsRoutes from './src/routes/contacts.routes.js';
 import utilitiesRoutes from './src/routes/utilities.routes.js';
 import paymentsRoutes from './src/routes/payments.routes.js';
 import businessRoutes from './src/routes/business.routes.js';
+import adminRoutes from './src/routes/admin.routes.js';
 import notificationsRoutes from './src/routes/notifications.routes.js';
 import webhooksRoutes from './src/routes/webhooks.routes.js';
 
@@ -34,6 +35,7 @@ api.use('/contacts', contactsRoutes);
 api.use('/utilities', utilitiesRoutes);
 api.use('/payments', paymentsRoutes);
 api.use('/business', businessRoutes);
+api.use('/admin', adminRoutes);
 api.use('/notifications', notificationsRoutes);
 
 app.use('/api/v1', api);

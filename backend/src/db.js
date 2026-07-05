@@ -227,6 +227,10 @@ for (const col of ['subscription_active INTEGER DEFAULT 0', 'subscription_plan T
 }
 try { await client.execute("ALTER TABLE cards ADD COLUMN holder TEXT DEFAULT ''"); } catch { /* ustun allaqachon mavjud */ }
 
+// Admin panelga kirish huquqi — founder email'i har doim 'admin' bo'lishi kerak,
+// hisob qachon yoki qaysi usulda (telefon/Google) ro'yxatdan o'tganidan qat'i nazar.
+await client.execute("UPDATE users SET role = 'admin' WHERE LOWER(email) = 'ravonpay@gmail.com' AND role != 'admin'");
+
 // Founder/CEO hisobi — biznes dashboard uchun to'lov (obuna) talab qilinmaydi,
 // har doim bepul va cheklovsiz foydalanadi. Bu HAQIQIY hisob (o'z paroli bilan
 // ro'yxatdan o'tadi, ma'lumoti noldan boshlanadi) — CEO demo hisobi kabi
