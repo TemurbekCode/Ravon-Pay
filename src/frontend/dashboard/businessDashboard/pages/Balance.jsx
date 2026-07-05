@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import { useAuth } from '../../../../hooks/useAuth.js';
 import { useBusiness } from '../../../../hooks/useBusiness.js';
 import { formatCurrency, uzsToUsd } from '../../../../utils/formatCurrency.js';
 import { isCardPickerValid } from '../../../../utils/cardValidation.js';
 import CardPicker from '../../../shared/CardPicker.jsx';
 
-const EMPTY_CARD = { cardNumber: '', expiry: '', cvv: '', cardholderName: '' };
+const EMPTY_CARD = { cardNumber: '', expiry: '', cvv: '', cardholderName: '', cardKind: 'international' };
 
 export default function Balance() {
   const { t } = useOutletContext();
+  const { request2FAChallenge } = useAuth();
   const { balance, revenue, payouts, withdraw, cards, addCard } = useBusiness();
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState('');
@@ -16,11 +18,15 @@ export default function Balance() {
   const [busy, setBusy] = useState(false);
   const [selectedCard, setSelectedCard] = useState('new');
   const [cardForm, setCardForm] = useState(EMPTY_CARD);
+  const [awaitingTwoFa, setAwaitingTwoFa] = useState(false);
+  const [twoFaCode, setTwoFaCode] = useState('');
+  const [twoFaDevCode, setTwoFaDevCode] = useState('');
 
   const openWithdraw = () => {
     setOpen((v) => {
       const next = !v;
       if (next) { setSelectedCard(cards[0]?.id || 'new'); setCardForm(EMPTY_CARD); }
+      setAwaitingTwoFa(false); setTwoFaCode(''); setTwoFaDevCode('');
       return next;
     });
   };
@@ -29,15 +35,24 @@ export default function Balance() {
     e.preventDefault();
     setError('');
     const n = Number(amount);
-    if (!n || !isCardPickerValid(selectedCard, cardForm)) return;
+    if (!n || (!awaitingTwoFa && !isCardPickerValid(selectedCard, cardForm))) return;
     setBusy(true);
     try {
       const cardId = selectedCard !== 'new' ? selectedCard : (await addCard(cardForm)).id;
-      await withdraw(n, cardId);
+      await withdraw(n, cardId, twoFaCode || undefined);
       setOpen(false);
       setAmount('');
     } catch (err) {
-      setError(err.message === 'INSUFFICIENT_BALANCE' ? t('send.insufficient') : t('set.soon'));
+      if (err.message === '2FA_REQUIRED') {
+        setAwaitingTwoFa(true);
+        try { setTwoFaDevCode((await request2FAChallenge()).devCode || ''); } catch { /* real SMS bo'lsa devCode bo'lmaydi */ }
+      } else if (err.message === 'INSUFFICIENT_BALANCE') {
+        setError(t('send.insufficient'));
+      } else if (err.message === "Kod noto'g'ri" || /muddati tugagan/.test(err.message || '')) {
+        setError(err.message);
+      } else {
+        setError(t('set.soon'));
+      }
     } finally {
       setBusy(false);
     }
@@ -63,8 +78,26 @@ export default function Balance() {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value.replace(/[^0-9]/g, ''))}
               />
-              <CardPicker cards={cards} selected={selectedCard} onSelect={setSelectedCard} cardForm={cardForm} onCardFormChange={setCardForm} t={t} />
-              <button type="submit" disabled={busy || !isCardPickerValid(selectedCard, cardForm)}>{t('balance.payout')}</button>
+              {!awaitingTwoFa && (
+                <CardPicker cards={cards} selected={selectedCard} onSelect={setSelectedCard} cardForm={cardForm} onCardFormChange={setCardForm} t={t} />
+              )}
+              {awaitingTwoFa && (
+                <>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    autoFocus
+                    maxLength={4}
+                    placeholder={t('otp.codePh')}
+                    value={twoFaCode}
+                    onChange={(e) => setTwoFaCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                  />
+                  {twoFaDevCode && <div className="inline-form-hint">{t('otp.demo')} {twoFaDevCode}</div>}
+                </>
+              )}
+              <button type="submit" disabled={busy || (!awaitingTwoFa && !isCardPickerValid(selectedCard, cardForm))}>
+                {awaitingTwoFa ? t('otp.verify') : t('balance.payout')}
+              </button>
               <button type="button" className="ghost" onClick={() => setOpen(false)}>{t('set.cancel')}</button>
               {error && <div className="inline-form-error">{error}</div>}
             </form>

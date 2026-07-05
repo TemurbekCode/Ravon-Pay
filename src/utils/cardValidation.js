@@ -77,11 +77,14 @@ export function isCardPickerValid(selected, cardForm) {
   return selected && selected !== 'new' ? true : isCardFormValid(cardForm);
 }
 
+// Mahalliy kartalarda (Uzcard/Humo) CVV umuman yo'q — shuning uchun
+// value.cardKind === 'local' bo'lsa CVV tekshiruvi butunlay o'tkazib yuboriladi.
 export function isCardFormValid(value) {
+  const cvvOk = value.cardKind === 'local' || isCvvValid(value.cvv);
   return (
     isCardNumberValid(value.cardNumber)
     && isExpiryValid(value.expiry)
-    && isCvvValid(value.cvv)
+    && cvvOk
     && isHolderValid(value.cardholderName)
   );
 }

@@ -2,8 +2,9 @@ import { Router } from 'express';
 import { db, uid, nowLabel, isFounder } from '../db.js';
 import { requireAuth } from '../middleware/requireAuth.js';
 import { requireSubscription } from '../middleware/requireSubscription.js';
-import { getBusiness, getNotifications, addNotification, nextSortOrder, formatCurrency, getWallet, parsePositiveAmount } from '../helpers.js';
+import { getBusiness, getNotifications, addNotification, nextSortOrder, formatCurrency, getWallet, parsePositiveAmount, verifyTwoFaCode } from '../helpers.js';
 import { validateCard } from '../cardValidation.js';
+import { uploadDocument } from '../uploadConfig.js';
 import { ah } from '../asyncHandler.js';
 
 const router = Router();
@@ -71,6 +72,11 @@ router.get('/balance', ah(async (req, res) => {
 router.post('/withdraw', ah(async (req, res) => {
   const amount = parsePositiveAmount(req.body?.amount);
   if (amount === null) return res.status(400).json({ message: "Summa noto'g'ri" });
+  if (req.dbUser.two_fa_enabled) {
+    if (!req.body?.twoFaCode) return res.status(428).json({ message: '2FA_REQUIRED' });
+    const check = await verifyTwoFaCode(req.dbUser.phone, req.body.twoFaCode);
+    if (!check.ok) return res.status(400).json({ message: check.message });
+  }
   const card = await db.prepare('SELECT * FROM cards WHERE id = ? AND user_id = ?').get(req.body?.cardId, req.userId);
   if (!card) return res.status(400).json({ message: 'Karta topilmadi' });
   const row = await db.prepare('SELECT balance_available FROM businesses WHERE user_id = ?').get(req.userId);
@@ -90,6 +96,22 @@ router.patch('/verification', ah(async (req, res) => {
   await db.prepare("UPDATE businesses SET tax_id = ?, legal_address = ?, verification_status = 'pending' WHERE user_id = ?")
     .run(taxId, legalAddress, req.userId);
   res.json({ verification: { status: 'pending', taxId, legalAddress } });
+}));
+
+// Hujjat (STIR guvohnomasi va h.k.) yuklash — mexanizm to'liq ishlaydi va
+// test qilingan, lekin frontend'da hozircha "hali qo'shilmagan" deb ko'rsatiladi
+// (haqiqiy foydalanuvchilar hali hujjat yubora olmaydi, faqat kelajakda shu
+// tugmani yoqish kifoya).
+router.post('/verification/document', (req, res, next) => {
+  uploadDocument.single('document')(req, res, (err) => {
+    if (err) return res.status(400).json({ message: err.message === 'File too large' ? "Fayl hajmi 5MB dan katta bo'lmasligi kerak" : err.message });
+    next();
+  });
+}, ah(async (req, res) => {
+  if (!req.file) return res.status(400).json({ message: 'Fayl talab qilinadi' });
+  await db.prepare('UPDATE businesses SET document_path = ?, document_uploaded_at = ? WHERE user_id = ?')
+    .run(req.file.filename, new Date().toISOString(), req.userId);
+  res.json({ documentUploaded: true });
 }));
 
 router.post('/utilities/pay', ah(async (req, res) => {

@@ -48,7 +48,7 @@ export const businessService = {
     try {
       return await apiClient.post('/business/withdraw', data);
     } catch (err) {
-      if (isNetworkError(err)) return mockStore.applyBizWithdraw(data.amount, data.cardId);
+      if (isNetworkError(err)) return mockStore.applyBizWithdraw(data.amount, data.cardId, data.twoFaCode);
       throw err;
     }
   },
@@ -58,6 +58,22 @@ export const businessService = {
       return await apiClient.patch('/business/verification', data);
     } catch (err) {
       if (isNetworkError(err)) return mockStore.updateBizVerification(data.taxId, data.legalAddress);
+      throw err;
+    }
+  },
+
+  // Hujjat yuklash mexanizmi to'liq ishlaydi (backend'da test qilingan), lekin
+  // frontend UI'da hozircha "hali qo'shilmagan" deb ko'rsatiladi — shuning uchun
+  // bu metod hali hech qayerdan chaqirilmaydi.
+  uploadDocument: async (file) => {
+    const formData = new FormData();
+    formData.append('document', file);
+    try {
+      return await apiClient.post('/business/verification/document', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+    } catch (err) {
+      if (isNetworkError(err)) return { documentUploaded: true };
       throw err;
     }
   },

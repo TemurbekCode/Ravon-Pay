@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import rateLimit from 'express-rate-limit';
 import { randomUUID } from 'node:crypto';
 import { db, uid, seedEmptyWalletAndBusiness, isFounder } from '../db.js';
-import { signToken } from '../authUtil.js';
+import { issueTokens, rotateRefreshToken, revokeRefreshToken } from '../authUtil.js';
 import { requireAuth } from '../middleware/requireAuth.js';
 import { getSmsProvider } from '../sms/SmsProvider.js';
 import { ah } from '../asyncHandler.js';
@@ -39,6 +39,7 @@ function serializeUser(row) {
     profiles,
     companyName: row.company_name || '',
     role: row.role,
+    twoFaEnabled: !!row.two_fa_enabled,
   };
 }
 
@@ -106,7 +107,8 @@ router.post('/otp/verify', bruteForceLimiter, ah(async (req, res) => {
     row = await db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
   }
 
-  res.json({ accessToken: signToken(row.id), user: serializeUser(row) });
+  const tokens = await issueTokens(row.id);
+  res.json({ ...tokens, user: serializeUser(row) });
 }));
 
 // Google orqali kirish — frontend'dan kelgan OAuth2 accessToken'ni to'g'ridan-to'g'ri
@@ -147,14 +149,27 @@ router.post('/google', bruteForceLimiter, ah(async (req, res) => {
     await seedEmptyWalletAndBusiness(userId, profile.name || 'Google User', email);
     row = await db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
   }
-  res.json({ accessToken: signToken(row.id), user: serializeUser(row) });
+  const tokens = await issueTokens(row.id);
+  res.json({ ...tokens, user: serializeUser(row) });
 }));
 
 router.get('/me', requireAuth, ah(async (req, res) => {
   res.json({ user: serializeUser(req.dbUser) });
 }));
 
-router.post('/logout', requireAuth, ah(async (_req, res) => {
+// Access token muddati tugaganda frontend shu yerga refreshToken yuboradi —
+// eskisi bekor qilinadi (rotatsiya), yangi access+refresh juftligi qaytadi.
+router.post('/refresh', ah(async (req, res) => {
+  const { refreshToken } = req.body || {};
+  if (!refreshToken) return res.status(400).json({ message: 'refreshToken talab qilinadi' });
+  const tokens = await rotateRefreshToken(refreshToken);
+  if (!tokens) return res.status(401).json({ message: "Sessiya muddati tugagan, qaytadan kiring" });
+  res.json(tokens);
+}));
+
+router.post('/logout', requireAuth, ah(async (req, res) => {
+  const { refreshToken } = req.body || {};
+  if (refreshToken) await revokeRefreshToken(refreshToken);
   res.json({ ok: true });
 }));
 
@@ -188,7 +203,7 @@ router.post('/activate-profile', requireAuth, ah(async (req, res) => {
 // qator sifatida yuborilsa — o'chiriladi; qiymat bilan yuborilsa — yangilanadi.
 router.patch('/me', requireAuth, ah(async (req, res) => {
   const body = req.body || {};
-  const { fullName, phone } = body;
+  const { fullName, phone, twoFaEnabled } = body;
   let email = req.dbUser.email;
   if ('email' in body) {
     const trimmed = (body.email || '').trim().toLowerCase();
@@ -198,10 +213,24 @@ router.patch('/me', requireAuth, ah(async (req, res) => {
     }
     email = trimmed || null;
   }
-  await db.prepare("UPDATE users SET full_name = COALESCE(?, full_name), phone = COALESCE(?, phone), email = ?, role = CASE WHEN ? = 1 THEN 'admin' ELSE role END WHERE id = ?")
-    .run(fullName || null, phone ?? null, email, isFounder(email) ? 1 : 0, req.userId);
+  const twoFa = 'twoFaEnabled' in body ? (twoFaEnabled ? 1 : 0) : req.dbUser.two_fa_enabled;
+  await db.prepare("UPDATE users SET full_name = COALESCE(?, full_name), phone = COALESCE(?, phone), email = ?, two_fa_enabled = ?, role = CASE WHEN ? = 1 THEN 'admin' ELSE role END WHERE id = ?")
+    .run(fullName || null, phone ?? null, email, twoFa, isFounder(email) ? 1 : 0, req.userId);
   const row = await db.prepare('SELECT * FROM users WHERE id = ?').get(req.userId);
   res.json({ user: serializeUser(row) });
+}));
+
+// Ikki bosqichli himoya yoqilgan bo'lsa, xavfli amallar (masalan pul yechish)
+// dan oldin foydalanuvchining O'Z telefon raqamiga yangi kod yuboradi — kod
+// otp_codes jadvalida saqlanadi (login OTP bilan bir xil mexanizm).
+router.post('/2fa/challenge', requireAuth, ah(async (req, res) => {
+  const phone = req.dbUser.phone;
+  const code = generateOtpCode();
+  await db.prepare('INSERT OR REPLACE INTO otp_codes (phone, code, expires_at, attempts) VALUES (?, ?, ?, 0)')
+    .run(phone, code, Date.now() + OTP_TTL_MS);
+  const provider = getSmsProvider();
+  const result = await provider.send(phone, code);
+  res.json({ sent: true, devCode: result.devCode });
 }));
 
 export default router;

@@ -3,7 +3,7 @@ import CardPicker from '../../shared/CardPicker.jsx';
 import { isCardPickerValid } from '../../../utils/cardValidation.js';
 
 const checkIc = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6 9 17l-5-5" /></svg>;
-const EMPTY_CARD = { cardNumber: '', expiry: '', cvv: '', cardholderName: '' };
+const EMPTY_CARD = { cardNumber: '', expiry: '', cvv: '', cardholderName: '', cardKind: 'international' };
 
 // Biznes dashboard obunasi — marketing + reja tanlash oynasi.
 // `mandatory` = true bo'lsa (obuna faol emasligi sababli majburiy ko'rsatilsa),

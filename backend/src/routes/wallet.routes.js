@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { db, uid, nowLabel } from '../db.js';
 import { requireAuth } from '../middleware/requireAuth.js';
-import { getWallet, getNotifications, addNotification, nextSortOrder, formatCurrency, creditWallet, parsePositiveAmount } from '../helpers.js';
+import { getWallet, getNotifications, addNotification, nextSortOrder, formatCurrency, creditWallet, parsePositiveAmount, verifyTwoFaCode } from '../helpers.js';
 import { getPaymentProvider } from '../payments/PaymentProvider.js';
 import { reservePaymeOrder } from '../payments/PaymeProvider.js';
 import { reserveClickOrder } from '../payments/ClickProvider.js';
@@ -37,6 +37,11 @@ router.post('/topup', ah(async (req, res) => {
 router.post('/withdraw', ah(async (req, res) => {
   const amount = parsePositiveAmount(req.body?.amount);
   if (amount === null) return res.status(400).json({ message: "Summa noto'g'ri" });
+  if (req.dbUser.two_fa_enabled) {
+    if (!req.body?.twoFaCode) return res.status(428).json({ message: '2FA_REQUIRED' });
+    const check = await verifyTwoFaCode(req.dbUser.phone, req.body.twoFaCode);
+    if (!check.ok) return res.status(400).json({ message: check.message });
+  }
   const card = await db.prepare('SELECT * FROM cards WHERE id = ? AND user_id = ?').get(req.body?.cardId, req.userId);
   if (!card) return res.status(400).json({ message: 'Karta topilmadi' });
   const w = await db.prepare('SELECT balance FROM wallets WHERE user_id = ?').get(req.userId);

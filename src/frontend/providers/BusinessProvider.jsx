@@ -76,8 +76,8 @@ export function BusinessProvider({ children }) {
     return res;
   };
 
-  const withdraw = async (amount, cardId) => {
-    const res = await businessService.withdraw({ amount, cardId });
+  const withdraw = async (amount, cardId, twoFaCode) => {
+    const res = await businessService.withdraw({ amount, cardId, twoFaCode });
     setBalance(res.balance);
     setPayouts(res.payouts);
     setNotifications(res.notifications ?? []);

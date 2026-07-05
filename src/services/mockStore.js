@@ -41,6 +41,18 @@ function isFounderProfile() {
   return (currentUser()?.email || '').trim().toLowerCase() === FOUNDER_EMAIL;
 }
 
+const MOCK_2FA_CODE = '1234';
+
+// Backend'dagi kabi: 2FA yoqilgan mock hisoblarda xavfli amallardan (pul
+// yechish) oldin kod talab qilinadi. Mock rejimda haqiqiy SMS yo'q, shuning
+// uchun kod har doim MOCK_2FA_CODE (authService.request2FAChallenge shu
+// qiymatni devCode sifatida qaytaradi).
+function checkMockTwoFa(twoFaCode) {
+  if (!currentUser()?.twoFaEnabled) return;
+  if (!twoFaCode) throw new Error('2FA_REQUIRED');
+  if (twoFaCode !== MOCK_2FA_CODE) throw new Error("Kod noto'g'ri");
+}
+
 function walletKey() { return `ravonpay_mock_wallet_${profileKey()}`; }
 function businessKey() { return `ravonpay_mock_business_${profileKey()}`; }
 function notificationsKey() { return `ravonpay_mock_notifications_${profileKey()}`; }
@@ -212,7 +224,8 @@ function applyTopUp(amount) {
   return { ...w, notifications: getNotifications() };
 }
 
-function applyWithdraw(amount, cardId) {
+function applyWithdraw(amount, cardId, twoFaCode) {
+  checkMockTwoFa(twoFaCode);
   const w = readWallet();
   if (amount > w.balance) throw new Error('INSUFFICIENT_BALANCE');
   const card = w.cards.find((c) => c.id === cardId);
@@ -333,7 +346,8 @@ function updateBizVerification(taxId, legalAddress) {
   return { verification: b.verification };
 }
 
-function applyBizWithdraw(amount, cardId) {
+function applyBizWithdraw(amount, cardId, twoFaCode) {
+  checkMockTwoFa(twoFaCode);
   const w = readWallet();
   const card = w.cards.find((c) => c.id === cardId);
   if (!card) throw new Error('INVALID_CARD');

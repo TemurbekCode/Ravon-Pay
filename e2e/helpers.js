@@ -4,6 +4,21 @@ export function randomPhone() {
   return `9${Date.now().toString().slice(-8)}${Math.floor(Math.random() * 10)}`;
 }
 
+// webServer sog'liq tekshiruvi (GET /health) muvaffaqiyatli javob bergandan
+// keyin ham, node event loop hali to'liq tinchimagan bo'lishi mumkin — birinchi
+// haqiqiy so'rov juda kam hollarda ECONNRESET bilan tugaydi (sof vaqt poygasi,
+// mantiqiy xato emas). Shuning uchun tarmoq darajasidagi xato bo'lsa bir marta
+// qayta urinadi.
+async function fetchWithRetry(url, options, retries = 2) {
+  try {
+    return await fetch(url, options);
+  } catch (err) {
+    if (retries <= 0) throw err;
+    await new Promise((r) => setTimeout(r, 500));
+    return fetchWithRetry(url, options, retries - 1);
+  }
+}
+
 function extractCode(texts) {
   for (const t of texts) {
     const m = t.match(/\d{4}/);
@@ -81,7 +96,7 @@ export async function registerBusiness(page, { companyName = 'Test Co', ownerNam
 // oldini oladi.
 export async function apiRegister({ phone, fullName = 'API User', accountType = 'personal', companyName = '' } = {}) {
   const p = phone || randomPhone();
-  const reqRes = await fetch(`${API}/auth/otp/request`, {
+  const reqRes = await fetchWithRetry(`${API}/auth/otp/request`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ phone: p, mode: 'register' }),
   }).then((r) => r.json());

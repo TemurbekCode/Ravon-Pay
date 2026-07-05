@@ -26,7 +26,7 @@ export const paymentService = {
     try {
       return await apiClient.post('/wallet/withdraw', data);
     } catch (err) {
-      if (isNetworkError(err)) return mockStore.applyWithdraw(data.amount, data.cardId);
+      if (isNetworkError(err)) return mockStore.applyWithdraw(data.amount, data.cardId, data.twoFaCode);
       throw err;
     }
   },

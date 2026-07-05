@@ -18,6 +18,7 @@ import {
 // "CVV faqat to'lov shlyuziga boradi, hech qachon serverda saqlanmaydi" qoidasiga mos).
 export default function CardForm({ value, onChange, t }) {
   const type = detectCardType(value.cardNumber);
+  const kind = value.cardKind || 'international';
   const [touched, setTouched] = useState({ number: false, expiry: false, cvv: false, holder: false });
   const touch = (field) => setTouched((tt) => ({ ...tt, [field]: true }));
 
@@ -28,8 +29,21 @@ export default function CardForm({ value, onChange, t }) {
 
   const cls = (isTouched, isValid) => (isTouched ? (isValid ? 'valid' : 'invalid') : '');
 
+  // Mahalliy (Uzcard/Humo) va xalqaro (Visa/Mastercard) kartalar orasida
+  // almashtiradi — mahalliy kartalarda CVV umuman yo'q, shuning uchun o'sha
+  // maydon butunlay yashiriladi (yozib qo'yilgan qiymati ham tozalanadi).
+  const setKind = (next) => onChange({ ...value, cardKind: next, cvv: next === 'local' ? '' : value.cvv });
+
   return (
     <div className="cardform">
+      <div className="cardform-kind">
+        <button type="button" className={kind === 'international' ? 'active' : ''} onClick={() => setKind('international')}>
+          {t('cardform.international')}
+        </button>
+        <button type="button" className={kind === 'local' ? 'active' : ''} onClick={() => setKind('local')}>
+          {t('cardform.local')}
+        </button>
+      </div>
       <div className="cardform-field">
         <label>{t('cardform.number')}</label>
         <div className="cardform-number-wrap">
@@ -60,20 +74,22 @@ export default function CardForm({ value, onChange, t }) {
           />
           {touched.expiry && !expiryValidNow && <div className="cardform-error">{t('cardform.err.expiry')}</div>}
         </div>
-        <div className="cardform-field">
-          <label>CVV</label>
-          <input
-            type="password"
-            inputMode="numeric"
-            placeholder="123"
-            maxLength={3}
-            className={cls(touched.cvv, cvvValidNow)}
-            value={value.cvv}
-            onChange={(e) => onChange({ ...value, cvv: e.target.value.replace(/\D/g, '').slice(0, 3) })}
-            onBlur={() => touch('cvv')}
-          />
-          {touched.cvv && !cvvValidNow && <div className="cardform-error">{t('cardform.err.cvv')}</div>}
-        </div>
+        {kind === 'international' && (
+          <div className="cardform-field">
+            <label>CVV</label>
+            <input
+              type="password"
+              inputMode="numeric"
+              placeholder="123"
+              maxLength={3}
+              className={cls(touched.cvv, cvvValidNow)}
+              value={value.cvv}
+              onChange={(e) => onChange({ ...value, cvv: e.target.value.replace(/\D/g, '').slice(0, 3) })}
+              onBlur={() => touch('cvv')}
+            />
+            {touched.cvv && !cvvValidNow && <div className="cardform-error">{t('cardform.err.cvv')}</div>}
+          </div>
+        )}
       </div>
       <div className="cardform-field">
         <label>{t('cardform.holder')}</label>

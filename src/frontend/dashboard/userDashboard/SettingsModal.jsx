@@ -30,7 +30,6 @@ export default function SettingsModal({ show, onClose, t }) {
   const [emailOpen, setEmailOpen] = useState(false);
   const [emailValue, setEmailValue] = useState(user?.email || '');
   const [emailMsg, setEmailMsg] = useState('');
-  const [twoFa, setTwoFa] = useState(true);
   const [push, setPush] = useState(true);
   const [emailNotif, setEmailNotif] = useState(true);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -95,8 +94,9 @@ export default function SettingsModal({ show, onClose, t }) {
           )}
           <div className="toggle-row">
             <span>{t('profile.2fa')}</span>
-            <div className={`toggle-switch ${twoFa ? 'on' : ''}`} onClick={() => setTwoFa((v) => !v)} />
+            <div className={`toggle-switch ${user?.twoFaEnabled ? 'on' : ''}`} onClick={() => updateProfile({ twoFaEnabled: !user?.twoFaEnabled })} />
           </div>
+          <p className="set-hint">{t('profile.2faHint')}</p>
         </div>
 
         <div className="setting-block">

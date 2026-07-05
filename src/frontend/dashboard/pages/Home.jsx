@@ -8,7 +8,7 @@ import { isCardPickerValid } from '../../../utils/cardValidation.js';
 import CardPicker from '../../shared/CardPicker.jsx';
 import CashFlowChart from '../userDashboard/CashFlowChart.jsx';
 
-const EMPTY_CARD = { cardNumber: '', expiry: '', cvv: '', cardholderName: '' };
+const EMPTY_CARD = { cardNumber: '', expiry: '', cvv: '', cardholderName: '', cardKind: 'international' };
 
 const TX_ICONS = {
   in: <path d="M12 19V5m-7 7 7-7 7 7" />,
@@ -24,7 +24,7 @@ function compact(n) {
 
 export default function Home() {
   const { t } = useOutletContext();
-  const { user } = useAuth();
+  const { user, request2FAChallenge } = useAuth();
   const navigate = useNavigate();
   const { balance, contacts, transactions, topUp, withdraw, addCard, addContact, cards } = useWallet();
   const [balanceVisible, setBalanceVisible] = useState(true);
@@ -35,6 +35,9 @@ export default function Home() {
   const [actionBusy, setActionBusy] = useState(false);
   const [selectedCard, setSelectedCard] = useState('new');
   const [cardForm, setCardForm] = useState(EMPTY_CARD);
+  const [awaitingTwoFa, setAwaitingTwoFa] = useState(false);
+  const [twoFaCode, setTwoFaCode] = useState('');
+  const [twoFaDevCode, setTwoFaDevCode] = useState('');
 
   const [contactOpen, setContactOpen] = useState(false);
   const [contactName, setContactName] = useState('');
@@ -53,8 +56,14 @@ export default function Home() {
     setActionError('');
     setSelectedCard(cards[0]?.id || 'new');
     setCardForm(EMPTY_CARD);
+    setAwaitingTwoFa(false);
+    setTwoFaCode('');
+    setTwoFaDevCode('');
   };
-  const closeAction = () => { setAction(null); setAmount(''); setActionError(''); };
+  const closeAction = () => {
+    setAction(null); setAmount(''); setActionError('');
+    setAwaitingTwoFa(false); setTwoFaCode(''); setTwoFaDevCode('');
+  };
 
   const submitAction = async (e) => {
     e.preventDefault();
@@ -68,11 +77,20 @@ export default function Home() {
         await topUp(n);
       } else {
         const cardId = selectedCard !== 'new' ? selectedCard : (await addCard(cardForm)).id;
-        await withdraw(n, cardId);
+        await withdraw(n, cardId, twoFaCode || undefined);
       }
       closeAction();
     } catch (err) {
-      setActionError(err.message === 'INSUFFICIENT_BALANCE' ? t('send.insufficient') : t('set.soon'));
+      if (err.message === '2FA_REQUIRED') {
+        setAwaitingTwoFa(true);
+        try { setTwoFaDevCode((await request2FAChallenge()).devCode || ''); } catch { /* real SMS bo'lsa devCode bo'lmaydi */ }
+      } else if (err.message === 'INSUFFICIENT_BALANCE') {
+        setActionError(t('send.insufficient'));
+      } else if (err.message === "Kod noto'g'ri" || /muddati tugagan/.test(err.message || '')) {
+        setActionError(err.message);
+      } else {
+        setActionError(t('set.soon'));
+      }
     } finally {
       setActionBusy(false);
     }
@@ -147,11 +165,25 @@ export default function Home() {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value.replace(/[^0-9]/g, ''))}
               />
-              {action === 'withdraw' && (
+              {action === 'withdraw' && !awaitingTwoFa && (
                 <CardPicker cards={cards} selected={selectedCard} onSelect={setSelectedCard} cardForm={cardForm} onCardFormChange={setCardForm} t={t} />
               )}
-              <button type="submit" disabled={actionBusy || (action === 'withdraw' && !isCardPickerValid(selectedCard, cardForm))}>
-                {action === 'topup' ? t('bal.topup') : t('bal.withdraw')}
+              {awaitingTwoFa && (
+                <>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    autoFocus
+                    maxLength={4}
+                    placeholder={t('otp.codePh')}
+                    value={twoFaCode}
+                    onChange={(e) => setTwoFaCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                  />
+                  {twoFaDevCode && <div className="inline-form-hint">{t('otp.demo')} {twoFaDevCode}</div>}
+                </>
+              )}
+              <button type="submit" disabled={actionBusy || (action === 'withdraw' && !awaitingTwoFa && !isCardPickerValid(selectedCard, cardForm))}>
+                {action === 'topup' ? t('bal.topup') : awaitingTwoFa ? t('otp.verify') : t('bal.withdraw')}
               </button>
               <button type="button" className="ghost" onClick={closeAction}>{t('set.cancel')}</button>
               {actionError && <div className="inline-form-error">{actionError}</div>}

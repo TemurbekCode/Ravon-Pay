@@ -6,7 +6,7 @@ import { isCardPickerValid } from '../../../utils/cardValidation.js';
 import CardPicker from '../../shared/CardPicker.jsx';
 import { ROUTES } from '../../../utils/constants.js';
 
-const EMPTY_CARD = { cardNumber: '', expiry: '', cvv: '', cardholderName: '' };
+const EMPTY_CARD = { cardNumber: '', expiry: '', cvv: '', cardholderName: '', cardKind: 'international' };
 
 // Foydalanuvchida hali shaxsiy (hamyon) profil bo'lmasa — to'liq qayta ro'yxatdan
 // o'tkazmasdan, karta ulash (yoki o'tkazib yuborish) qadami bilan faollashtiradi.

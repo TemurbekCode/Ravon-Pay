@@ -11,7 +11,7 @@ import AuthShell from './AuthShell.jsx';
 import SocialButtons from './SocialButtons.jsx';
 import AddEmailPrompt from './AddEmailPrompt.jsx';
 
-const EMPTY_CARD = { cardNumber: '', expiry: '', cvv: '', cardholderName: '' };
+const EMPTY_CARD = { cardNumber: '', expiry: '', cvv: '', cardholderName: '', cardKind: 'international' };
 
 export default function Register() {
   const { requestOtp, verifyOtp } = useAuth();

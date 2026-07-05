@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth.js';
 import { adminService } from '../../services/adminService.js';
+import { apiClient } from '../../services/apiClient.js';
 import { ROUTES } from '../../utils/constants.js';
 import '../dashboard/businessDashboard/Business.scss';
 import './AdminDashboard.scss';
@@ -38,6 +39,13 @@ export default function AdminDashboard() {
     try { await adminService.rejectVerification(userId); await reload(); } finally { setBusyId(''); }
   };
 
+  // Oddiy <a href> ishlamaydi — bu endpoint autentifikatsiya talab qiladi,
+  // brauzer esa oddiy havola bosilganda Authorization headerini yubormaydi.
+  const viewDocument = async (userId) => {
+    const blob = await apiClient.get(`/admin/verifications/${userId}/document`, { responseType: 'blob' });
+    window.open(URL.createObjectURL(blob), '_blank');
+  };
+
   const handleLogout = () => { logout(); navigate(ROUTES.login); };
 
   if (loading) return <div style={{ display: 'grid', placeItems: 'center', minHeight: '100vh' }}>Yuklanmoqda...</div>;
@@ -70,7 +78,7 @@ export default function AdminDashboard() {
             <div className="tbl-wrap">
               <table className="tbl">
                 <thead>
-                  <tr><th>Kompaniya</th><th>Egasi</th><th>Telefon</th><th>STIR</th><th>Yuridik manzil</th><th>Holat</th><th></th></tr>
+                  <tr><th>Kompaniya</th><th>Egasi</th><th>Telefon</th><th>STIR</th><th>Yuridik manzil</th><th>Hujjat</th><th>Holat</th><th></th></tr>
                 </thead>
                 <tbody>
                   {verifications.map((v) => (
@@ -80,6 +88,7 @@ export default function AdminDashboard() {
                       <td>{v.phone}</td>
                       <td>{v.taxId}</td>
                       <td>{v.legalAddress}</td>
+                      <td>{v.documentUploaded ? <button className="panel-link" onClick={() => viewDocument(v.userId)}>Ko'rish</button> : '—'}</td>
                       <td><span className={`pill ${v.status === 'pending' ? 'pending' : 'done'}`}>{v.status === 'pending' ? "Ko'rib chiqilmoqda" : 'Tasdiqlangan'}</span></td>
                       <td>
                         {v.status === 'pending' && (

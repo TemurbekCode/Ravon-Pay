@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import { randomUUID } from 'node:crypto';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = path.join(__dirname, '..', 'data');
+export const DATA_DIR = path.join(__dirname, '..', 'data');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
 // Lokal ishlab chiqishda oddiy fayl (node:sqlite bilan bir xil joyda), production'da
@@ -218,14 +218,28 @@ CREATE TABLE IF NOT EXISTS provider_transactions (
   cancel_time INTEGER DEFAULT 0,
   reason INTEGER
 );
+
+-- Access token endi qisqa muddatli (1 soat) — foydalanuvchi doimiy kirgan
+-- holda qolishi uchun uzoqroq (30 kun) "refresh" tokeni shu jadvalda saqlanadi
+-- va HAR DOIM bazadan tekshiriladi, shuning uchun chiqish (logout) yoki
+-- shubhali holatda darhol bekor qilish (revoke) mumkin — sof JWT'dan farqli
+-- o'laroq, imzosi to'g'ri bo'lsa ham bazada bo'lmasa endi ishlamaydi.
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  expires_at INTEGER NOT NULL,
+  created_at INTEGER NOT NULL,
+  revoked INTEGER DEFAULT 0
+);
 `);
 
 // Himoya migratsiyasi — agar "businesses" jadvali oldingi versiyadan (obuna
 // ustunlarisiz) qolgan bo'lsa, mavjud ma'lumotlarni yo'qotmasdan qo'shib qo'yadi.
-for (const col of ['subscription_active INTEGER DEFAULT 0', 'subscription_plan TEXT DEFAULT \'\'', 'subscription_started_at TEXT DEFAULT \'\'', 'baseline_month TEXT DEFAULT \'\'', 'tax_id TEXT DEFAULT \'\'', 'legal_address TEXT DEFAULT \'\'', 'verification_status TEXT DEFAULT \'none\'']) {
+for (const col of ['subscription_active INTEGER DEFAULT 0', 'subscription_plan TEXT DEFAULT \'\'', 'subscription_started_at TEXT DEFAULT \'\'', 'baseline_month TEXT DEFAULT \'\'', 'tax_id TEXT DEFAULT \'\'', 'legal_address TEXT DEFAULT \'\'', 'verification_status TEXT DEFAULT \'none\'', 'document_path TEXT DEFAULT \'\'', 'document_uploaded_at TEXT DEFAULT \'\'']) {
   try { await client.execute(`ALTER TABLE businesses ADD COLUMN ${col}`); } catch { /* ustun allaqachon mavjud */ }
 }
 try { await client.execute("ALTER TABLE cards ADD COLUMN holder TEXT DEFAULT ''"); } catch { /* ustun allaqachon mavjud */ }
+try { await client.execute('ALTER TABLE users ADD COLUMN two_fa_enabled INTEGER DEFAULT 0'); } catch { /* ustun allaqachon mavjud */ }
 
 // Admin panelga kirish huquqi — founder email'i har doim 'admin' bo'lishi kerak,
 // hisob qachon yoki qaysi usulda (telefon/Google) ro'yxatdan o'tganidan qat'i nazar.

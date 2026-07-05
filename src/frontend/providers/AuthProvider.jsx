@@ -24,6 +24,7 @@ export function AuthProvider({ children }) {
   const verifyOtp = async ({ phone, code, mode, fullName, accountType, companyName }) => {
     const res = await authService.verifyOtp({ phone, code, mode, fullName, accountType, companyName });
     localStorage.setItem('ravonpay_access_token', res.accessToken);
+    if (res.refreshToken) localStorage.setItem('ravonpay_refresh_token', res.refreshToken);
     setUser(res.user);
     return res;
   };
@@ -31,13 +32,17 @@ export function AuthProvider({ children }) {
   const loginWithGoogle = async (googleAccessToken) => {
     const res = await authService.googleAuth(googleAccessToken);
     localStorage.setItem('ravonpay_access_token', res.accessToken);
+    if (res.refreshToken) localStorage.setItem('ravonpay_refresh_token', res.refreshToken);
     setUser(res.user);
     return res;
   };
 
   const logout = () => {
     mockStore.clearAll(); // joriy profilning hamyon/biznes ma'lumotini tozalaydi (identifikatsiya o'chirilishidan oldin)
+    const refreshToken = localStorage.getItem('ravonpay_refresh_token');
+    if (refreshToken) authService.logout(refreshToken).catch(() => {});
     localStorage.removeItem('ravonpay_access_token');
+    localStorage.removeItem('ravonpay_refresh_token');
     localStorage.removeItem('ravonpay_mock_user');
     setUser(null);
   };
@@ -68,12 +73,16 @@ export function AuthProvider({ children }) {
     return res;
   };
 
+  // Ikki bosqichli himoya yoqilgan bo'lsa, pul yechishdan oldin shu orqali
+  // o'z telefon raqamiga tasdiqlash kodi so'raladi.
+  const request2FAChallenge = () => authService.request2FAChallenge();
+
   const value = {
     user, loading,
     isAuthenticated: !!user,
     isBusiness: user?.accountType === 'business',
     hasBoth, profiles,
-    requestOtp, verifyOtp, logout, setUser, switchAccount, activateProfile, updateProfile, loginWithGoogle,
+    requestOtp, verifyOtp, logout, setUser, switchAccount, activateProfile, updateProfile, loginWithGoogle, request2FAChallenge,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

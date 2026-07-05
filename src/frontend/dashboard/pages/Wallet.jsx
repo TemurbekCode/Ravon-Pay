@@ -5,7 +5,7 @@ import { formatCurrency } from '../../../utils/formatCurrency.js';
 import { isCardFormValid } from '../../../utils/cardValidation.js';
 import CardForm from '../../shared/CardForm.jsx';
 
-const EMPTY_CARD = { cardNumber: '', expiry: '', cvv: '', cardholderName: '' };
+const EMPTY_CARD = { cardNumber: '', expiry: '', cvv: '', cardholderName: '', cardKind: 'international' };
 
 export default function Wallet() {
   const { t } = useOutletContext();

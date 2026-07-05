@@ -1,8 +1,10 @@
 import { Router } from 'express';
+import path from 'node:path';
 import { db } from '../db.js';
 import { requireAuth } from '../middleware/requireAuth.js';
 import { requireAdmin } from '../middleware/requireAdmin.js';
 import { addNotification } from '../helpers.js';
+import { UPLOADS_DIR } from '../uploadConfig.js';
 import { ah } from '../asyncHandler.js';
 
 const router = Router();
@@ -26,7 +28,7 @@ router.get('/overview', ah(async (req, res) => {
 router.get('/verifications', ah(async (req, res) => {
   const rows = await db.prepare(`
     SELECT u.id AS user_id, u.full_name, u.company_name, u.phone, u.email,
-           b.tax_id, b.legal_address, b.verification_status
+           b.tax_id, b.legal_address, b.verification_status, b.document_path
     FROM businesses b JOIN users u ON u.id = b.user_id
     WHERE b.verification_status != 'none'
     ORDER BY (b.verification_status = 'pending') DESC, u.full_name ASC
@@ -41,8 +43,17 @@ router.get('/verifications', ah(async (req, res) => {
       taxId: r.tax_id,
       legalAddress: r.legal_address,
       status: r.verification_status,
+      documentUploaded: !!r.document_path,
     })),
   });
+}));
+
+// Admin hujjatni ko'rib chiqishi uchun — fayl nomi bazadan olinadi, so'rovdan
+// EMAS (aks holda path traversal orqali serverdagi ixtiyoriy faylni o'qib bo'lardi).
+router.get('/verifications/:userId/document', ah(async (req, res) => {
+  const row = await db.prepare('SELECT document_path FROM businesses WHERE user_id = ?').get(req.params.userId);
+  if (!row?.document_path) return res.status(404).json({ message: 'Hujjat topilmadi' });
+  res.sendFile(path.join(UPLOADS_DIR, row.document_path));
 }));
 
 router.post('/verifications/:userId/approve', ah(async (req, res) => {

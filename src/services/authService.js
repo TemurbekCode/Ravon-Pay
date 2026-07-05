@@ -12,7 +12,7 @@ const MOCK_OTP_CODE = '1234';
 // (masalan ['personal'] yoki ['personal','business']). `hasBoth` shundan kelib chiqadi.
 function makeUser({ accountType = 'personal', email = '', fullName = 'Foydalanuvchi', hasBoth = false, companyName = '', phone = '', profiles }) {
   const activeProfiles = profiles || (hasBoth ? ['personal', 'business'] : [accountType]);
-  return { id: 'mock-' + Date.now(), fullName, email, phone, accountType, hasBoth: activeProfiles.length >= 2, profiles: activeProfiles, companyName, role: hasBoth ? 'founder' : 'user' };
+  return { id: 'mock-' + Date.now(), fullName, email, phone, accountType, hasBoth: activeProfiles.length >= 2, profiles: activeProfiles, companyName, role: hasBoth ? 'founder' : 'user', twoFaEnabled: false };
 }
 
 // Mock sessiyani localStorage'ga yozadi — token prefiksi orqali keyinchalik
@@ -82,11 +82,11 @@ export const authService = {
     }
   },
 
-  logout: () => {
+  logout: (refreshToken) => {
     const token = localStorage.getItem('ravonpay_access_token') || '';
     localStorage.removeItem(MOCK_USER_KEY);
     if (token.startsWith('mock-token')) return Promise.resolve({ ok: true });
-    return apiClient.post('/auth/logout').catch(() => ({ ok: true }));
+    return apiClient.post('/auth/logout', { refreshToken }).catch(() => ({ ok: true }));
   },
 
   // Allaqachon faollashtirilgan profil turiga o'tish (qayta ro'yxatdan o'tmasdan).
@@ -140,6 +140,7 @@ export const authService = {
           fullName: data?.fullName ?? current.fullName,
           phone: data?.phone ?? current.phone,
           email: 'email' in (data || {}) ? data.email : current.email,
+          twoFaEnabled: 'twoFaEnabled' in (data || {}) ? !!data.twoFaEnabled : current.twoFaEnabled,
         };
         localStorage.setItem(MOCK_USER_KEY, JSON.stringify(updated));
         return { user: updated };
@@ -149,6 +150,17 @@ export const authService = {
   },
 
   refresh: (refreshToken) => apiClient.post('/auth/refresh', { refreshToken }),
+
+  // Ikki bosqichli himoya yoqilgan bo'lsa, pul yechishdan oldin shu orqali
+  // o'z telefon raqamiga yangi tasdiqlash kodi so'raladi.
+  request2FAChallenge: async () => {
+    try {
+      return await apiClient.post('/auth/2fa/challenge');
+    } catch (err) {
+      if (isNetworkError(err)) return { sent: true, devCode: MOCK_OTP_CODE };
+      throw err;
+    }
+  },
 
   // Google orqali kirish — backend Google'ning userinfo endpoint'i orqali accessToken'ni
   // tekshiradi. Buni mock qilib bo'lmaydi (haqiqiy Google tasdiqlash kerak), shuning uchun

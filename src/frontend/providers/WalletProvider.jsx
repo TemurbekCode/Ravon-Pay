@@ -53,8 +53,8 @@ export function WalletProvider({ children }) {
     return res;
   };
 
-  const withdraw = async (amount, cardId) => {
-    const res = await paymentService.withdraw({ amount, cardId });
+  const withdraw = async (amount, cardId, twoFaCode) => {
+    const res = await paymentService.withdraw({ amount, cardId, twoFaCode });
     setBalance(res.balance);
     setTransactions(res.transactions);
     setNotifications(res.notifications ?? []);

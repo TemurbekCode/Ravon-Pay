@@ -17,6 +17,21 @@ export function parsePositiveAmount(input) {
   return Math.floor(n);
 }
 
+// Ikki bosqichli himoya yoqilgan hisoblarda xavfli amallardan (pul yechish)
+// oldin qo'shimcha kod talab qilinadi — /auth/2fa/challenge orqali yuborilgan
+// kod shu funksiya orqali tekshiriladi va (muvaffaqiyatli bo'lsa) darhol
+// iste'mol qilinadi (qayta ishlatib bo'lmaydi).
+export async function verifyTwoFaCode(phone, code) {
+  const otp = await db.prepare('SELECT * FROM otp_codes WHERE phone = ?').get(phone);
+  if (!otp || otp.expires_at < Date.now()) return { ok: false, message: "Kod muddati tugagan, qaytadan so'rang" };
+  if (otp.code !== (code || '').trim()) {
+    await db.prepare('UPDATE otp_codes SET attempts = attempts + 1 WHERE phone = ?').run(phone);
+    return { ok: false, message: "Kod noto'g'ri" };
+  }
+  await db.prepare('DELETE FROM otp_codes WHERE phone = ?').run(phone);
+  return { ok: true };
+}
+
 export function rowToCard(r) {
   return { id: r.id, variant: r.variant, type: r.type, num: r.num, exp: r.exp, holder: r.holder || '', balance: r.balance, frozen: !!r.frozen };
 }
@@ -110,7 +125,7 @@ export async function getBusiness(userId) {
     revenue: b.revenue, salesCount: b.sales_count, avgOrder: b.avg_order,
     baseline: { revenue: b.baseline_revenue, salesCount: b.baseline_sales_count, avgOrder: b.baseline_avg_order },
     balance: { available: b.balance_available, pending: b.balance_pending },
-    verification: { status: b.verification_status || 'none', taxId: b.tax_id || '', legalAddress: b.legal_address || '' },
+    verification: { status: b.verification_status || 'none', taxId: b.tax_id || '', legalAddress: b.legal_address || '', documentUploaded: !!b.document_path },
     links: linkRows.map(rowToLink),
     invoices: invoiceRows.map(rowToInvoice),
     checkoutPages: checkoutRows.map(rowToCheckoutPage),
