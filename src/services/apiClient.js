@@ -1,14 +1,25 @@
 import axios from 'axios';
 import { API_URL } from '../utils/constants.js';
 
+// Login/Register sahifasi ochilgan zahoti chaqiriladi — agar backend uyg'onayotgan
+// bo'lsa, foydalanuvchi telefon raqamini kiritib bo'lguncha unga bir necha soniya
+// bosh berish uchun (to'liq cold-start vaqtini kafolatlamaydi, lekin kamaytiradi).
+// /health "/api/v1" ostida emas, shuning uchun API_URL'dan alohida hisoblanadi.
+const BACKEND_ORIGIN = API_URL.replace(/\/api\/v1\/?$/, '');
+export function warmupBackend() {
+  fetch(`${BACKEND_ORIGIN}/health`).catch(() => { /* uyg'onmagan bo'lsa ham keyingi haqiqiy so'rov normal kutadi */ });
+}
+
 export const apiClient = axios.create({
   baseURL: API_URL,
   headers: { 'Content-Type': 'application/json' },
-  // Bepul/kichik hostinglarda backend uxlab qolgan bo'lsa (cold start) uyg'onishi
-  // bir necha o'nlab soniya olishi mumkin — bu ilgari 2000ms edi, shu qisqa muddat
-  // sababli har bir sekinroq javob "tarmoq xatosi" deb noto'g'ri hisoblanardi (auth
-  // uchun bu ayniqsa xavfli edi, quyidagi izohga qarang).
-  timeout: 15000,
+  // Render'ning bepul tarifi 15 daqiqa harakatsizlikdan keyin backend'ni to'liq
+  // to'xtatadi ("spin down") — keyingi so'rov uni qayta ishga tushiradi, bu esa
+  // Render'ning o'zi ogohlantirganidek 50+ soniya cho'zilishi mumkin. Ilgari bu
+  // qiymat 15000ms edi — shu sabab tufayli aynan cold-start paytida haqiqiy
+  // so'rovlar "tarmoq xatosi" deb noto'g'ri hisoblanib, foydalanuvchi hisobiga
+  // kira olmay qolardi.
+  timeout: 65000,
 });
 
 // Har so'rovga token qo'shish

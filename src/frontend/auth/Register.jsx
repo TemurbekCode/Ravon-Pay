@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
+import { warmupBackend } from '../../services/apiClient.js';
 import { AUTH_I18N } from './auth.i18n.js';
 import { ACCOUNT_TYPES } from '../../utils/constants.js';
 import { cardService } from '../../services/cardService.js';
@@ -18,6 +19,8 @@ export default function Register() {
   const { lang } = useLanguage();
   const navigate = useNavigate();
   const t = (key) => AUTH_I18N[lang]?.[key] ?? AUTH_I18N.uz[key] ?? key;
+
+  useEffect(() => { warmupBackend(); }, []);
 
   // 'type' (tur tanlash) -> 'form' (ism/telefon) -> 'otp' (SMS kod) -> 'email' (ixtiyoriy) -> 'card' (karta ulash, ixtiyoriy)
   const [step, setStep] = useState('type');

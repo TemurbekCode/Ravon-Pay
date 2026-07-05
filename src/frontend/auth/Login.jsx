@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useLanguage } from '../../hooks/useLanguage.js';
+import { warmupBackend } from '../../services/apiClient.js';
 import { AUTH_I18N } from './auth.i18n.js';
 import AuthShell from './AuthShell.jsx';
 import SocialButtons from './SocialButtons.jsx';
@@ -11,6 +12,8 @@ export default function Login() {
   const { lang } = useLanguage();
   const navigate = useNavigate();
   const t = (key) => AUTH_I18N[lang]?.[key] ?? AUTH_I18N.uz[key] ?? key;
+
+  useEffect(() => { warmupBackend(); }, []);
 
   const [step, setStep] = useState('phone'); // 'phone' -> 'otp'
   const [phone, setPhone] = useState('');
