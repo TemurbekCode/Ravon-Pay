@@ -203,13 +203,18 @@ router.post('/activate-profile', requireAuth, ah(async (req, res) => {
   res.json({ user: serializeUser(row) });
 }));
 
-// fullName/phone'dan tashqari email ham shu yerdan qo'shiladi/o'zgartiriladi/
+// fullName'dan tashqari email ham shu yerdan qo'shiladi/o'zgartiriladi/
 // o'chiriladi (birinchi kirishdagi ixtiyoriy taklif yoki Sozlamalar orqali).
 // `email` maydoni so'rovda umuman bo'lmasa — mavjud qiymat saqlanadi; bo'sh
 // qator sifatida yuborilsa — o'chiriladi; qiymat bilan yuborilsa — yangilanadi.
+// ESLATMA: telefon raqami ATAYLAB shu yerdan o'zgartirilmaydi — u tizimga
+// kirishning ASOSIY kaliti, shuning uchun o'zgartirish OTP orqali tasdiqlashni
+// talab qiladi (hali qurilmagan alohida oqim); aks holda foydalanuvchi hali
+// ro'yxatdan o'tmagan raqamni SMS orqali tasdiqlamasdan o'ziniki qilib olishi
+// mumkin edi.
 router.patch('/me', requireAuth, ah(async (req, res) => {
   const body = req.body || {};
-  const { fullName, phone, twoFaEnabled } = body;
+  const { fullName, twoFaEnabled } = body;
   let email = req.dbUser.email;
   if ('email' in body) {
     const trimmed = (body.email || '').trim().toLowerCase();
@@ -220,8 +225,8 @@ router.patch('/me', requireAuth, ah(async (req, res) => {
     email = trimmed || null;
   }
   const twoFa = 'twoFaEnabled' in body ? (twoFaEnabled ? 1 : 0) : req.dbUser.two_fa_enabled;
-  await db.prepare("UPDATE users SET full_name = COALESCE(?, full_name), phone = COALESCE(?, phone), email = ?, two_fa_enabled = ?, role = CASE WHEN ? = 1 THEN 'admin' ELSE role END WHERE id = ?")
-    .run(fullName || null, phone ?? null, email, twoFa, isFounder(email) ? 1 : 0, req.userId);
+  await db.prepare("UPDATE users SET full_name = COALESCE(?, full_name), email = ?, two_fa_enabled = ?, role = CASE WHEN ? = 1 THEN 'admin' ELSE role END WHERE id = ?")
+    .run(fullName || null, email, twoFa, isFounder(email) ? 1 : 0, req.userId);
   const row = await db.prepare('SELECT * FROM users WHERE id = ?').get(req.userId);
   res.json({ user: serializeUser(row) });
 }));
@@ -229,7 +234,7 @@ router.patch('/me', requireAuth, ah(async (req, res) => {
 // Ikki bosqichli himoya yoqilgan bo'lsa, xavfli amallar (masalan pul yechish)
 // dan oldin foydalanuvchining O'Z telefon raqamiga yangi kod yuboradi — kod
 // otp_codes jadvalida saqlanadi (login OTP bilan bir xil mexanizm).
-router.post('/2fa/challenge', requireAuth, ah(async (req, res) => {
+router.post('/2fa/challenge', requireAuth, bruteForceLimiter, ah(async (req, res) => {
   const phone = req.dbUser.phone;
   const code = generateOtpCode();
   await db.prepare('INSERT OR REPLACE INTO otp_codes (phone, code, expires_at, attempts) VALUES (?, ?, ?, 0)')

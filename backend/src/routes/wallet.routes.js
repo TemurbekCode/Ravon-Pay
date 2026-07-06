@@ -56,12 +56,24 @@ router.post('/withdraw', ah(async (req, res) => {
     return res.status(400).json({ message: err.message });
   }
 
-  const newBalance = w.balance - amount;
-  await db.prepare('UPDATE wallets SET balance = ? WHERE user_id = ?').run(newBalance, req.userId);
+  // Yuqoridagi tekshiruv (SELECT) bilan bu yerdagi yozish orasida boshqa
+  // so'rov ham balansni kamaytirgan bo'lishi mumkin — shuning uchun yakuniy
+  // yechish HAM shart bo'lgan balansni o'zi ichida tekshiradigan, atomik
+  // buyruq orqali amalga oshiriladi (bir vaqtda kelgan ikkita so'rov balansni
+  // manfiyga tushirib qo'yishining oldini oladi).
+  const debit = await db.prepare('UPDATE wallets SET balance = balance - ? WHERE user_id = ? AND balance >= ?').run(amount, req.userId, amount);
+  if (debit.changes === 0) {
+    // Payout provayderi (hozircha Mock) allaqachon "muvaffaqiyatli" javob bergan,
+    // lekin balans oxirgi lahzada yetarli bo'lmay qoldi — juda kam uchraydigan holat,
+    // haqiqiy provayder ulanganda bu qo'llab-quvvatlash/solishtirish (reconciliation)
+    // talab qilishi mumkin.
+    return res.status(409).json({ message: "Balans oxirgi lahzada o'zgardi, qaytadan urinib ko'ring" });
+  }
+  const fresh = await db.prepare('SELECT balance FROM wallets WHERE user_id = ?').get(req.userId);
   const order = await nextSortOrder('wallet_transactions', req.userId);
   await db.prepare('INSERT INTO wallet_transactions (id, user_id, type, name, date, status, amount, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
     .run(uid('tx'), req.userId, 'out', `${card.num} kartasiga yechildi`, nowLabel(), payout.status === 'done' ? 'done' : 'pending', -amount, order);
-  await addNotification(req.userId, 'Pul yechildi', `-${formatCurrency(amount)} so'm ${card.num} kartangizga yechib olindi. Balans: ${formatCurrency(newBalance)} so'm`, 'out');
+  await addNotification(req.userId, 'Pul yechildi', `-${formatCurrency(amount)} so'm ${card.num} kartangizga yechib olindi. Balans: ${formatCurrency(fresh.balance)} so'm`, 'out');
   res.json({ ...(await getWallet(req.userId)), notifications: await getNotifications(req.userId) });
 }));
 

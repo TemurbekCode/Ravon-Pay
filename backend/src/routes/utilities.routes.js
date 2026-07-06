@@ -11,10 +11,11 @@ router.post('/pay', ah(async (req, res) => {
   const { category, account } = req.body || {};
   const amount = parsePositiveAmount(req.body?.amount);
   if (amount === null) return res.status(400).json({ message: "Summa noto'g'ri" });
-  const w = await db.prepare('SELECT balance FROM wallets WHERE user_id = ?').get(req.userId);
-  if (amount > w.balance) return res.status(400).json({ message: 'INSUFFICIENT_BALANCE' });
-  const newBalance = w.balance - amount;
-  await db.prepare('UPDATE wallets SET balance = ? WHERE user_id = ?').run(newBalance, req.userId);
+  // Atomik, o'z ichida shart tekshiradigan yozish — SELECT+UPDATE oralig'idagi
+  // "race condition"ning oldini oladi (bir vaqtda kelgan ikki so'rov balansni
+  // manfiyga tushirib qo'yishi mumkin edi).
+  const debit = await db.prepare('UPDATE wallets SET balance = balance - ? WHERE user_id = ? AND balance >= ?').run(amount, req.userId, amount);
+  if (debit.changes === 0) return res.status(400).json({ message: 'INSUFFICIENT_BALANCE' });
   const order = await nextSortOrder('wallet_transactions', req.userId);
   await db.prepare('INSERT INTO wallet_transactions (id, user_id, type, name, date, status, amount, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
     .run(uid('tx'), req.userId, 'out', `Kommunal to'lov — ${category} (${account})`, nowLabel(), 'done', -amount, order);

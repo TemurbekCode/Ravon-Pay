@@ -81,7 +81,10 @@ router.post('/withdraw', ah(async (req, res) => {
   if (!card) return res.status(400).json({ message: 'Karta topilmadi' });
   const row = await db.prepare('SELECT balance_available FROM businesses WHERE user_id = ?').get(req.userId);
   if (amount > row.balance_available) return res.status(400).json({ message: 'INSUFFICIENT_BALANCE' });
-  await db.prepare('UPDATE businesses SET balance_available = balance_available - ? WHERE user_id = ?').run(amount, req.userId);
+  // Atomik, shart bilan yozish — tepadagi tekshiruv bilan bu yozish orasidagi
+  // "race condition" balansni manfiyga tushirib qo'yishining oldini oladi.
+  const debit = await db.prepare('UPDATE businesses SET balance_available = balance_available - ? WHERE user_id = ? AND balance_available >= ?').run(amount, req.userId, amount);
+  if (debit.changes === 0) return res.status(400).json({ message: 'INSUFFICIENT_BALANCE' });
   const order = await nextSortOrder('biz_payouts', req.userId);
   await db.prepare('INSERT INTO biz_payouts (id, user_id, name, date, amount, status, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)')
     .run(uid('po'), req.userId, `${card.num} kartasiga`, nowLabel(), -amount, 'pending', order);
@@ -120,7 +123,8 @@ router.post('/utilities/pay', ah(async (req, res) => {
   if (amount === null) return res.status(400).json({ message: "Summa noto'g'ri" });
   const row = await db.prepare('SELECT balance_available FROM businesses WHERE user_id = ?').get(req.userId);
   if (amount > row.balance_available) return res.status(400).json({ message: 'INSUFFICIENT_BALANCE' });
-  await db.prepare('UPDATE businesses SET balance_available = balance_available - ? WHERE user_id = ?').run(amount, req.userId);
+  const debit = await db.prepare('UPDATE businesses SET balance_available = balance_available - ? WHERE user_id = ? AND balance_available >= ?').run(amount, req.userId, amount);
+  if (debit.changes === 0) return res.status(400).json({ message: 'INSUFFICIENT_BALANCE' });
   const order = await nextSortOrder('biz_transactions', req.userId);
   await db.prepare(`INSERT INTO biz_transactions (id, user_id, initials, grad, name, email, mi, method, status, date, amount, is_in, sort_order)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'done', ?, ?, 0, ?)`)

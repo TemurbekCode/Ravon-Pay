@@ -37,10 +37,53 @@ function prepare(sql) {
   };
 }
 
+// Bir nechta yozuvni BITTA atomik tranzaksiyada bajaradi — barchasi yoki
+// hech biri. Pul harakatlanadigan ko'p qadamli amallar (masalan P2P: jo'natuvchidan
+// yechish + qabul qiluvchiga qo'shish) uchun shart, aks holda ikkinchi qadamdan
+// oldin server xato bersa pul "yo'qolib qolishi" mumkin edi.
+export async function withTransaction(fn) {
+  const tx = await client.transaction('write');
+  try {
+    const wrapped = {
+      execute: async (sql, args = []) => {
+        const res = await tx.execute({ sql, args });
+        return { lastInsertRowid: Number(res.lastInsertRowid ?? 0), changes: res.rowsAffected, rows: res.rows };
+      },
+    };
+    const result = await fn(wrapped);
+    await tx.commit();
+    return result;
+  } catch (err) {
+    await tx.rollback().catch(() => {});
+    throw err;
+  } finally {
+    tx.close();
+  }
+}
+
 export const db = {
   prepare,
   exec: (sql) => client.executeMultiple(sql),
 };
+
+// `ALTER TABLE ... ADD COLUMN` avval ustun mavjudligini ANIQ tekshiradi (PRAGMA
+// orqali), keyin qo'shadi. Ilgari "try/catch, xatoni jimgina yutish" naqshi
+// ishlatilgan edi — bu ustun ALLAQACHON borligidan boshqa har qanday sababdan
+// (masalan uzoqdagi Turso'da kutilmagan xatolik) ALTER muvaffaqiyatsiz bo'lsa ham
+// buni butunlay yashirib, keyinchalik shu ustunga yozishga urinilganda "no such
+// column" bilan boshqa joyda (masalan ro'yxatdan o'tishda) portlab ketishiga olib
+// kelardi — aynan shu sabab production'da ro'yxatdan o'tish butunlay ishlamay
+// qolishiga sabab bo'lgan edi.
+async function ensureColumn(table, columnDef) {
+  const columnName = columnDef.trim().split(/\s+/)[0];
+  try {
+    const info = await client.execute(`PRAGMA table_info(${table})`);
+    if (info.rows.some((c) => c.name === columnName)) return;
+    await client.execute(`ALTER TABLE ${table} ADD COLUMN ${columnDef}`);
+  } catch (err) {
+    console.error(`[db migratsiya] ${table}.${columnName} qo'shib bo'lmadi:`, err);
+  }
+}
 
 try { await client.execute('PRAGMA foreign_keys = ON;'); } catch { /* remote Turso'da PRAGMA kerak emas */ }
 
@@ -238,12 +281,12 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
 // Himoya migratsiyasi — agar "businesses" jadvali oldingi versiyadan (obuna
 // ustunlarisiz) qolgan bo'lsa, mavjud ma'lumotlarni yo'qotmasdan qo'shib qo'yadi.
 for (const col of ['subscription_active INTEGER DEFAULT 0', 'subscription_plan TEXT DEFAULT \'\'', 'subscription_started_at TEXT DEFAULT \'\'', 'baseline_month TEXT DEFAULT \'\'', 'tax_id TEXT DEFAULT \'\'', 'legal_address TEXT DEFAULT \'\'', 'verification_status TEXT DEFAULT \'none\'', 'document_path TEXT DEFAULT \'\'', 'document_uploaded_at TEXT DEFAULT \'\'']) {
-  try { await client.execute(`ALTER TABLE businesses ADD COLUMN ${col}`); } catch { /* ustun allaqachon mavjud */ }
+  await ensureColumn('businesses', col);
 }
-try { await client.execute("ALTER TABLE cards ADD COLUMN holder TEXT DEFAULT ''"); } catch { /* ustun allaqachon mavjud */ }
-try { await client.execute('ALTER TABLE users ADD COLUMN two_fa_enabled INTEGER DEFAULT 0'); } catch { /* ustun allaqachon mavjud */ }
-try { await client.execute('ALTER TABLE wallets ADD COLUMN baseline_balance INTEGER NOT NULL DEFAULT 0'); } catch { /* ustun allaqachon mavjud */ }
-try { await client.execute("ALTER TABLE wallets ADD COLUMN baseline_month TEXT NOT NULL DEFAULT ''"); } catch { /* ustun allaqachon mavjud */ }
+await ensureColumn('cards', "holder TEXT DEFAULT ''");
+await ensureColumn('users', 'two_fa_enabled INTEGER DEFAULT 0');
+await ensureColumn('wallets', 'baseline_balance INTEGER NOT NULL DEFAULT 0');
+await ensureColumn('wallets', "baseline_month TEXT NOT NULL DEFAULT ''");
 
 // Admin panelga kirish huquqi — founder email'i har doim 'admin' bo'lishi kerak,
 // hisob qachon yoki qaysi usulda (telefon/Google) ro'yxatdan o'tganidan qat'i nazar.

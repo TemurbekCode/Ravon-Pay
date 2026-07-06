@@ -10,20 +10,28 @@ export function formatCurrency(amount) {
 // Manfiy yoki 0 summa (masalan withdraw/send'ga -100000 yuborish) balansni
 // TEKSHIRUVDAN o'tkazib (amount > balance => false) uni oshirib yuborishi
 // mumkin edi — shuning uchun faqat musbat, chekli, butun sonlarga ruxsat beriladi
-// (frontend ham faqat butun so'm kiritadi, kasr kerak emas).
+// (frontend ham faqat butun so'm kiritadi, kasr kerak emas). Yuqori chegara —
+// JS'ning xavfsiz butun son chegarasidan (2^53) ancha past, aniqlik xatolarining
+// oldini olish uchun (real to'lov provayderisiz bunday summa haqiqiy emas).
+const MAX_AMOUNT = 1_000_000_000_000; // 1 trillion so'm
 export function parsePositiveAmount(input) {
   const n = Number(input);
-  if (!Number.isFinite(n) || n <= 0) return null;
+  if (!Number.isFinite(n) || n <= 0 || n > MAX_AMOUNT) return null;
   return Math.floor(n);
 }
+
+const MAX_TWO_FA_ATTEMPTS = 5;
 
 // Ikki bosqichli himoya yoqilgan hisoblarda xavfli amallardan (pul yechish)
 // oldin qo'shimcha kod talab qilinadi — /auth/2fa/challenge orqali yuborilgan
 // kod shu funksiya orqali tekshiriladi va (muvaffaqiyatli bo'lsa) darhol
-// iste'mol qilinadi (qayta ishlatib bo'lmaydi).
+// iste'mol qilinadi (qayta ishlatib bo'lmaydi). Login OTP'dagi kabi urinishlar
+// soni cheklangan — aks holda haqiqiy tokeni o'g'irlangan hujumchi 4 xonali
+// kodni cheksiz taxmin qila olardi.
 export async function verifyTwoFaCode(phone, code) {
   const otp = await db.prepare('SELECT * FROM otp_codes WHERE phone = ?').get(phone);
   if (!otp || otp.expires_at < Date.now()) return { ok: false, message: "Kod muddati tugagan, qaytadan so'rang" };
+  if (otp.attempts >= MAX_TWO_FA_ATTEMPTS) return { ok: false, message: "Juda ko'p noto'g'ri urinish, qaytadan kod so'rang" };
   if (otp.code !== (code || '').trim()) {
     await db.prepare('UPDATE otp_codes SET attempts = attempts + 1 WHERE phone = ?').run(phone);
     return { ok: false, message: "Kod noto'g'ri" };
@@ -75,14 +83,17 @@ export async function nextSortOrder(table, userId) {
 // Payme/Click webhook'i pulni tasdiqlaganda ham (onPerform) shu funksiya orqali
 // ishlatiladi, shunda ikkala yo'l bir xil yozuv qoldiradi.
 export async function creditWallet(userId, amount, label = "Hamyon to'ldirildi") {
+  // Bir vaqtda ikkita kredit (masalan ikkita webhook deyarli bir xil paytda
+  // kelsa) avvalgi "o'qib-tekshirib-yozish" naqshida bir-birini "yutib
+  // yuborishi" (lost update) mumkin edi — nisbiy (`balance + ?`) va atomik
+  // yagona SQL buyrug'i bu xavfni butunlay yo'q qiladi.
+  await db.prepare('UPDATE wallets SET balance = balance + ? WHERE user_id = ?').run(amount, userId);
   const w = await db.prepare('SELECT balance FROM wallets WHERE user_id = ?').get(userId);
-  const newBalance = w.balance + amount;
-  await db.prepare('UPDATE wallets SET balance = ? WHERE user_id = ?').run(newBalance, userId);
   const order = await nextSortOrder('wallet_transactions', userId);
   await db.prepare('INSERT INTO wallet_transactions (id, user_id, type, name, date, status, amount, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
     .run(uid('tx'), userId, 'in', label, nowLabel(), 'done', amount, order);
-  await addNotification(userId, "Hamyon to'ldirildi", `+${formatCurrency(amount)} so'm hamyoningizga tushdi. Balans: ${formatCurrency(newBalance)} so'm`, 'in');
-  return newBalance;
+  await addNotification(userId, "Hamyon to'ldirildi", `+${formatCurrency(amount)} so'm hamyoningizga tushdi. Balans: ${formatCurrency(w.balance)} so'm`, 'in');
+  return w.balance;
 }
 
 // Business bilan bir xil g'oya: har oy boshida balans "baseline"ga qayta
