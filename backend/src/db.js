@@ -87,43 +87,18 @@ async function ensureColumn(table, columnDef) {
 
 try { await client.execute('PRAGMA foreign_keys = ON;'); } catch { /* remote Turso'da PRAGMA kerak emas */ }
 
-// Eski sxemadan (email majburiy, telefon unique emas — parol bilan kirish
-// davridan qolgan) yangi sxemaga (telefon asosiy, email ixtiyoriy) o'tish —
-// mavjud ma'lumotlarni yo'qotmasdan jadvalni qayta quradi.
-{
-  const existing = await client.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'");
-  if (existing.rows.length) {
-    const info = await client.execute('PRAGMA table_info(users)');
-    const emailCol = info.rows.find((c) => c.name === 'email');
-    if (emailCol && emailCol.notnull === 1) {
-      await client.execute('ALTER TABLE users RENAME TO users_old_migration');
-      await client.execute(`CREATE TABLE users (
-        id TEXT PRIMARY KEY,
-        email TEXT UNIQUE,
-        phone TEXT UNIQUE NOT NULL,
-        password_hash TEXT DEFAULT '',
-        full_name TEXT NOT NULL,
-        company_name TEXT DEFAULT '',
-        account_type TEXT NOT NULL DEFAULT 'personal',
-        profiles TEXT NOT NULL DEFAULT '["personal"]',
-        role TEXT NOT NULL DEFAULT 'user',
-        created_at TEXT NOT NULL
-      )`);
-      const oldRows = await client.execute('SELECT * FROM users_old_migration');
-      const seenPhones = new Set();
-      for (const row of oldRows.rows) {
-        let phone = row.phone || `unknown-${row.id}`;
-        if (seenPhones.has(phone)) phone = `${phone}-${row.id.slice(-4)}`; // duplikat telefonlarni ajratish
-        seenPhones.add(phone);
-        await client.execute({
-          sql: `INSERT INTO users (id, email, phone, password_hash, full_name, company_name, account_type, profiles, role, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          args: [row.id, row.email, phone, row.password_hash, row.full_name, row.company_name, row.account_type, row.profiles, row.role, row.created_at],
-        });
-      }
-      await client.execute('DROP TABLE users_old_migration');
-    }
-  }
-}
+// ESLATMA: bu yerda ilgari eski sxemadan (email majburiy, parol bilan kirish
+// davridan qolgan) yangi sxemaga bir martalik o'tish mantiqi bor edi (users
+// jadvalini users_old_migration'ga rename qilib, qayta qurib, ma'lumotni
+// ko'chirib, keyin eskisini DROP qiladigan). Ishlab turgan bazada bu o'tish
+// allaqachon KO'PDAN BERI muvaffaqiyatli yakunlangan (email ustuni allaqachon
+// ixtiyoriy) — lekin bu tekshiruv HAR SERVER ishga tushishida (Render bepul
+// tarifida bu tez-tez, har "uyg'onish"da) qayta bajarilardi. Bepul hostingda
+// server tez-tez qayta ishga tushishi bilan bog'liq bo'lgan, aniq sababi to'liq
+// tasdiqlanmagan holatda, xuddi shu DROP TABLE users_old_migration'ga oid
+// "no such table" xatosi ro'yxatdan o'tishni butunlay to'xtatib qo'ygan edi —
+// vazifasi allaqachon bajarilgan, hozirgi bazaga umuman kerak bo'lmagan shu
+// bir martalik kod butunlay olib tashlandi.
 
 // ============================================
 // SXEMA — mockStore.js dagi shakllarning to'g'ridan-to'g'ri server tomonidagi
