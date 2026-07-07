@@ -11,6 +11,7 @@ import { BIZ_I18N } from './business.i18n.js';
 import { BIZ_ROUTES } from './business.routes.js';
 import { ToastProvider } from './ToastContext.jsx';
 import { BusinessProvider } from '../../providers/BusinessProvider.jsx';
+import SplashScreen from '../../shared/SplashScreen.jsx';
 import BizSidebar from './BizSidebar.jsx';
 import BizTopbar from './BizTopbar.jsx';
 import BizBottomNav from './BizBottomNav.jsx';
@@ -69,7 +70,7 @@ function BusinessShell() {
     navigate(ROUTES.dashboard);
   };
 
-  if (loading) return null;
+  if (loading) return <SplashScreen />;
 
   // Obuna faol bo'lmasa (va hisob founder bo'lmasa) — biznes dashboard butunlay
   // yopiq, faqat reja tanlab to'lov qilingandan keyin ochiladi.

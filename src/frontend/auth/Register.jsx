@@ -11,6 +11,7 @@ import CardForm from '../shared/CardForm.jsx';
 import AuthShell from './AuthShell.jsx';
 import SocialButtons from './SocialButtons.jsx';
 import AddEmailPrompt from './AddEmailPrompt.jsx';
+import SplashScreen from '../shared/SplashScreen.jsx';
 
 const EMPTY_CARD = { cardNumber: '', expiry: '', cvv: '', cardholderName: '', cardKind: 'international' };
 
@@ -90,6 +91,7 @@ export default function Register() {
 
   return (
     <AuthShell>
+      {(loading || cardBusy) && <SplashScreen label="Ro'yxatdan o'tilmoqda..." />}
       {step === 'card' ? (
         // ===== KARTA ULASH (ixtiyoriy) =====
         <>

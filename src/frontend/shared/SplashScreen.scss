@@ -1,0 +1,215 @@
+.splash-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: radial-gradient(120% 120% at 50% 20%, #1414E8 0%, #0A0ACF 55%, #05058F 100%);
+  color: #fff;
+
+  .bg-waves {
+    position: absolute;
+    left: -10vw;
+    bottom: -4vh;
+    width: 120vw;
+    height: 34vh;
+    opacity: 0.35;
+    z-index: 1;
+    pointer-events: none;
+
+    .wave {
+      fill: none;
+      stroke: #4D6BFF;
+      stroke-width: 3;
+      stroke-linecap: round;
+      opacity: 0.5;
+    }
+
+    .flow-a { animation: splash-bg-flow 9s linear infinite; }
+    .flow-b { animation: splash-bg-flow 13s linear infinite reverse; }
+  }
+
+  @keyframes splash-bg-flow {
+    from { transform: translateX(0); }
+    to { transform: translateX(-160px); }
+  }
+
+  .splash {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 28px;
+    position: relative;
+    z-index: 2;
+  }
+
+  .logo-wrap {
+    width: 168px;
+    height: 168px;
+    position: relative;
+    transform: scale(0.6);
+    opacity: 0;
+    filter: blur(6px);
+  }
+
+  .splash.phase-1 .logo-wrap {
+    animation: splash-logo-pop 0.45s cubic-bezier(.2, 1.4, .35, 1) forwards;
+  }
+
+  @keyframes splash-logo-pop {
+    to { transform: scale(1); opacity: 1; filter: blur(0); }
+  }
+
+  .splash.looping .logo-wrap {
+    animation: splash-breathe 2.6s ease-in-out infinite;
+    opacity: 1;
+    filter: none;
+  }
+
+  @keyframes splash-breathe {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.035); }
+  }
+
+  .logo-glow {
+    position: absolute;
+    inset: -30%;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(77, 107, 255, .45) 0%, transparent 65%);
+    opacity: 0;
+    transition: opacity .8s ease;
+    pointer-events: none;
+  }
+
+  .splash.phase-4 .logo-glow {
+    opacity: 1;
+    animation: splash-glow-pulse 2.6s ease-in-out infinite;
+  }
+
+  @keyframes splash-glow-pulse {
+    0%, 100% { transform: scale(1); opacity: .7; }
+    50% { transform: scale(1.15); opacity: 1; }
+  }
+
+  svg { display: block; width: 100%; height: 100%; overflow: visible; }
+
+  .wave {
+    fill: none;
+    stroke: #4D6BFF;
+    stroke-linecap: round;
+    stroke-dasharray: 600;
+    stroke-dashoffset: 600;
+  }
+
+  .wave-back { opacity: .45; stroke-width: 11; }
+  .wave-front { stroke-width: 13; }
+
+  .splash.phase-2 .wave-front { animation: splash-draw-wave .55s ease-out forwards; }
+  .splash.phase-2 .wave-back { animation: splash-draw-wave .55s ease-out .08s forwards; }
+
+  @keyframes splash-draw-wave {
+    to { stroke-dashoffset: 0; }
+  }
+
+  .splash.looping .wave-flow-front { animation: splash-flow 2.4s linear infinite; }
+  .splash.looping .wave-flow-back { animation: splash-flow 3.2s linear infinite reverse; }
+
+  @keyframes splash-flow {
+    from { transform: translateX(0); }
+    to { transform: translateX(-72px); }
+  }
+
+  .letter-r {
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-weight: 600;
+    font-size: 128px;
+    fill: #fff;
+    opacity: 0;
+    transform: translateY(26px);
+  }
+
+  .splash.phase-3 .letter-r {
+    animation: splash-rise-up .5s cubic-bezier(.2, 1.2, .3, 1) forwards;
+  }
+
+  @keyframes splash-rise-up {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .arrow { opacity: 0; }
+  .splash.phase-4 .arrow { opacity: 1; }
+
+  .wordmark {
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: .5px;
+    display: flex;
+
+    span {
+      opacity: 0;
+      transform: translateY(14px);
+      display: inline-block;
+    }
+  }
+
+  .splash.phase-3 .wordmark span {
+    animation: splash-rise-up .4s cubic-bezier(.2, 1.2, .3, 1) forwards;
+    animation-delay: calc(var(--i) * 30ms);
+  }
+
+  .wordmark .pay { color: #4D6BFF; }
+
+  .progress {
+    width: 190px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    opacity: 0;
+    transition: opacity .5s ease;
+  }
+
+  .splash.phase-4 .progress { opacity: 1; }
+
+  .bar {
+    width: 100%;
+    height: 4px;
+    border-radius: 99px;
+    background: rgba(255, 255, 255, .16);
+    overflow: hidden;
+  }
+
+  .bar-fill {
+    height: 100%;
+    width: 40%;
+    border-radius: 99px;
+    background: linear-gradient(90deg, #4D6BFF, #fff);
+  }
+
+  .splash.looping .bar-fill { animation: splash-bar-slide 1.4s ease-in-out infinite; }
+
+  @keyframes splash-bar-slide {
+    0% { transform: translateX(-120%); }
+    100% { transform: translateX(250%); }
+  }
+
+  .status {
+    font-size: 13px;
+    color: rgba(255, 255, 255, .55);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .logo-wrap, .letter-r, .wordmark span {
+      animation: none !important;
+      opacity: 1 !important;
+      transform: none !important;
+      filter: none !important;
+    }
+    .wave { stroke-dashoffset: 0 !important; }
+    .wave-flow-front, .wave-flow-back, .bg-waves .flow-a, .bg-waves .flow-b, .bar-fill {
+      animation: none !important;
+    }
+  }
+}

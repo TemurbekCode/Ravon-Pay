@@ -3,9 +3,11 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { useLanguage } from '../../hooks/useLanguage.js';
 import { useReveal } from '../../hooks/useReveal.js';
 import { useSwipeNav } from '../../hooks/useSwipeNav.js';
+import { useWallet } from '../../hooks/useWallet.js';
 import { ROUTES } from '../../utils/constants.js';
 import { DASH_I18N } from './dashboard.i18n.js';
 import { WalletProvider } from '../providers/WalletProvider.jsx';
+import SplashScreen from '../shared/SplashScreen.jsx';
 
 import Sidebar from './userDashboard/Sidebar.jsx';
 import Topbar from './userDashboard/Topbar.jsx';
@@ -31,6 +33,7 @@ const SWIPE_STOPS = [
 function DashboardShell() {
   const { lang } = useLanguage();
   const { pathname } = useLocation();
+  const { loading } = useWallet();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const swipeHandlers = useSwipeNav(SWIPE_STOPS, () => setSettingsOpen(true));
@@ -41,6 +44,8 @@ function DashboardShell() {
   const t = (key) => DASH_I18N[lang]?.[key] ?? DASH_I18N.uz[key] ?? key;
 
   const closeSidebar = () => setSidebarOpen(false);
+
+  if (loading) return <SplashScreen />;
 
   return (
     <div className="app">

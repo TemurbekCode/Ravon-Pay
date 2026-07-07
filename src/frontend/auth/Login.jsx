@@ -6,6 +6,7 @@ import { warmupBackend } from '../../services/apiClient.js';
 import { AUTH_I18N } from './auth.i18n.js';
 import AuthShell from './AuthShell.jsx';
 import SocialButtons from './SocialButtons.jsx';
+import SplashScreen from '../shared/SplashScreen.jsx';
 
 export default function Login() {
   const { requestOtp, verifyOtp } = useAuth();
@@ -54,6 +55,7 @@ export default function Login() {
 
   return (
     <AuthShell>
+      {loading && <SplashScreen label="Yuborilmoqda..." />}
       <div className="fp-head">
         <h1>{t('login.title')}</h1>
         <p>{t('login.sub')}</p>

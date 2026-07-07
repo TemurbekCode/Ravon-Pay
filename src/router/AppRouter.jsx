@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.js';
+import SplashScreen from '../frontend/shared/SplashScreen.jsx';
 
 import Landing from '../frontend/landing/Landing.jsx';
 import Login from '../frontend/auth/Login.jsx';
@@ -38,14 +39,14 @@ import AdminDashboard from '../frontend/admin/AdminDashboard.jsx';
 
 function Protected({ children }) {
   const { isAuthenticated, loading } = useAuth();
-  if (loading) return <div style={{ display: 'grid', placeItems: 'center', minHeight: '100vh' }}>Yuklanmoqda...</div>;
+  if (loading) return <SplashScreen />;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   return children;
 }
 
 function AdminProtected({ children }) {
   const { isAuthenticated, loading, user } = useAuth();
-  if (loading) return <div style={{ display: 'grid', placeItems: 'center', minHeight: '100vh' }}>Yuklanmoqda...</div>;
+  if (loading) return <SplashScreen />;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (user?.role !== 'admin') return <Navigate to="/dashboard" replace />;
   return children;
