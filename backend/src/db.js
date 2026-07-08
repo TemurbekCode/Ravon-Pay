@@ -253,6 +253,138 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
 );
 `);
 
+// TOPILGAN HAQIQIY ILDIZ SABAB: yuqoridagi bir martalik users->users_old_migration
+// migratsiyasi ishlaganda, SQLite/Turso quyidagi 14 ta jadvalning FOREIGN KEY
+// aniqlamasini AVTOMATIK ravishda "users_old_migration"ga ishora qiladigan qilib
+// qayta yozgan (jadval nomi o'zgartirilganda unga bog'liq boshqa jadvallar shunday
+// yangilanadi) — lekin migratsiya users_old_migration'ni DROP qilganda, shu 14 ta
+// jadvaldagi endi "osilib qolgan" FK'lar hech qachon tuzatilmagan. Natijada
+// FOREIGN KEY tekshiruvi yoqilgan holda (PRAGMA foreign_keys = ON) shu jadvallardan
+// BIRIGA yozish har safar "no such table: main.users_old_migration" bilan
+// qulardi — aynan shu ro'yxatdan o'tishni butunlay ishlamay qo'ygan edi (avvalgi
+// "users_old_migration kodi olib tashlandi" tuzatishi noto'g'ri joyni nishonlagan
+// edi: muammo kodda emas, uzoqdagi Turso bazasining SXEMASIDA edi).
+const REBUILD_TARGET_SCHEMA = {
+  wallets: `CREATE TABLE wallets (
+    user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    balance INTEGER NOT NULL DEFAULT 0,
+    baseline_balance INTEGER NOT NULL DEFAULT 0,
+    baseline_month TEXT NOT NULL DEFAULT ''
+  )`,
+  cards: `CREATE TABLE cards (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    variant TEXT, type TEXT, num TEXT, exp TEXT, holder TEXT DEFAULT '',
+    balance INTEGER DEFAULT 0, frozen INTEGER DEFAULT 0,
+    sort_order INTEGER DEFAULT 0
+  )`,
+  wallet_transactions: `CREATE TABLE wallet_transactions (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    type TEXT, name TEXT, date TEXT, status TEXT, amount INTEGER,
+    sort_order INTEGER DEFAULT 0
+  )`,
+  contacts: `CREATE TABLE contacts (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    initials TEXT, name TEXT, phone TEXT, grad TEXT,
+    sort_order INTEGER DEFAULT 0
+  )`,
+  businesses: `CREATE TABLE businesses (
+    user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    revenue INTEGER DEFAULT 0,
+    sales_count INTEGER DEFAULT 0,
+    avg_order INTEGER DEFAULT 0,
+    baseline_revenue INTEGER DEFAULT 0,
+    baseline_sales_count INTEGER DEFAULT 0,
+    baseline_avg_order INTEGER DEFAULT 0,
+    balance_available INTEGER DEFAULT 0,
+    balance_pending INTEGER DEFAULT 0,
+    subscription_active INTEGER DEFAULT 0,
+    subscription_plan TEXT DEFAULT '',
+    subscription_started_at TEXT DEFAULT '',
+    baseline_month TEXT DEFAULT '',
+    tax_id TEXT DEFAULT '',
+    legal_address TEXT DEFAULT '',
+    verification_status TEXT DEFAULT 'none',
+    document_path TEXT DEFAULT '',
+    document_uploaded_at TEXT DEFAULT ''
+  )`,
+  biz_links: `CREATE TABLE biz_links (
+    id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title TEXT, slug TEXT, uses INTEGER DEFAULT 0, amount INTEGER DEFAULT 0,
+    sort_order INTEGER DEFAULT 0
+  )`,
+  biz_invoices: `CREATE TABLE biz_invoices (
+    id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    num TEXT, client TEXT, due TEXT, amount INTEGER DEFAULT 0, status TEXT DEFAULT 'pending',
+    sort_order INTEGER DEFAULT 0
+  )`,
+  biz_checkout_pages: `CREATE TABLE biz_checkout_pages (
+    id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title TEXT, slug TEXT, views INTEGER DEFAULT 0, active INTEGER DEFAULT 1,
+    sort_order INTEGER DEFAULT 0
+  )`,
+  biz_team: `CREATE TABLE biz_team (
+    id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    initials TEXT, grad TEXT, name TEXT, email TEXT, role_key TEXT,
+    sort_order INTEGER DEFAULT 0
+  )`,
+  biz_customers: `CREATE TABLE biz_customers (
+    id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    initials TEXT, grad TEXT, name TEXT, email TEXT, orders INTEGER DEFAULT 0, total INTEGER DEFAULT 0
+  )`,
+  biz_transactions: `CREATE TABLE biz_transactions (
+    id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    initials TEXT, grad TEXT, name TEXT, email TEXT, mi TEXT, method TEXT,
+    status TEXT, date TEXT, amount INTEGER, is_in INTEGER,
+    sort_order INTEGER DEFAULT 0
+  )`,
+  biz_payouts: `CREATE TABLE biz_payouts (
+    id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name TEXT, date TEXT, amount INTEGER, status TEXT,
+    sort_order INTEGER DEFAULT 0
+  )`,
+  notifications: `CREATE TABLE notifications (
+    id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    kind TEXT, title TEXT, body TEXT, date TEXT, read INTEGER DEFAULT 0,
+    sort_order INTEGER DEFAULT 0
+  )`,
+  provider_transactions: `CREATE TABLE provider_transactions (
+    id TEXT PRIMARY KEY,
+    provider TEXT NOT NULL,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    order_id TEXT NOT NULL,
+    amount INTEGER NOT NULL,
+    state INTEGER DEFAULT 1,
+    create_time INTEGER,
+    perform_time INTEGER DEFAULT 0,
+    cancel_time INTEGER DEFAULT 0,
+    reason INTEGER
+  )`,
+};
+
+async function rebuildTablesWithDanglingUsersForeignKey() {
+  for (const [table, createSql] of Object.entries(REBUILD_TARGET_SCHEMA)) {
+    const meta = await client.execute({ sql: "SELECT sql FROM sqlite_master WHERE type='table' AND name=?", args: [table] });
+    const currentSql = meta.rows[0]?.sql || '';
+    if (!currentSql.includes('users_old_migration')) continue; // allaqachon to'g'ri
+    console.warn(`[db migratsiya] ${table} hali ham users_old_migration'ga osilib qolgan — qayta quriladi`);
+    const cols = (await client.execute(`PRAGMA table_info(${table})`)).rows.map((c) => c.name).join(', ');
+    const broken = `${table}__broken_fk`;
+    await client.execute('PRAGMA foreign_keys = OFF');
+    await client.execute(`ALTER TABLE ${table} RENAME TO ${broken}`);
+    await client.execute(createSql);
+    // Ustun nomlari bo'yicha aniq mos yozish — jismoniy tartib emas, nom orqali
+    // ko'chirilgani uchun ALTER TABLE ADD COLUMN bilan keyinroq qo'shilgan
+    // ustunlar ham to'g'ri joyiga tushadi.
+    await client.execute(`INSERT INTO ${table} (${cols}) SELECT ${cols} FROM ${broken}`);
+    await client.execute(`DROP TABLE ${broken}`);
+    await client.execute('PRAGMA foreign_keys = ON');
+  }
+}
+await rebuildTablesWithDanglingUsersForeignKey();
+
 // Himoya migratsiyasi — agar "businesses" jadvali oldingi versiyadan (obuna
 // ustunlarisiz) qolgan bo'lsa, mavjud ma'lumotlarni yo'qotmasdan qo'shib qo'yadi.
 for (const col of ['subscription_active INTEGER DEFAULT 0', 'subscription_plan TEXT DEFAULT \'\'', 'subscription_started_at TEXT DEFAULT \'\'', 'baseline_month TEXT DEFAULT \'\'', 'tax_id TEXT DEFAULT \'\'', 'legal_address TEXT DEFAULT \'\'', 'verification_status TEXT DEFAULT \'none\'', 'document_path TEXT DEFAULT \'\'', 'document_uploaded_at TEXT DEFAULT \'\'']) {
