@@ -64,7 +64,7 @@ export async function handlePaymeWebhook({ method, params, id }, { onPerform }) 
   if (method === 'CheckPerformTransaction') {
     const orderId = params?.account?.order_id;
     const order = await db.prepare('SELECT * FROM provider_transactions WHERE order_id = ? AND provider = ?').get(orderId, 'payme');
-    if (!order && !orderId) return rpcError(id, ERR.ORDER_NOT_FOUND, "Buyurtma topilmadi");
+    if (!order) return rpcError(id, ERR.ORDER_NOT_FOUND, "Buyurtma topilmadi");
     return rpcResult(id, { allow: true });
   }
 

@@ -31,17 +31,26 @@ router.post('/send', ah(async (req, res) => {
   if (amount > w.balance) return res.status(400).json({ message: 'INSUFFICIENT_BALANCE' });
 
   if (recipientType === 'card') {
+    // Avval BALANSNI atomik, shart bilan yechib qo'yamiz (pulni "band" qilamiz),
+    // FAQAT shundan keyin tashqi provayderga chiqim so'rovini yuboramiz. Ilgari
+    // tartib teskari edi (avval provider.createPayout, keyin debit) — bu bilan,
+    // agar ikkita so'rov bir vaqtda kelsa, ikkalasi ham tashqi to'lovni "muvaffaqiyatli"
+    // deb topib bo'lardi (Mock hozircha zararsiz, lekin haqiqiy Payme/Click
+    // ulanganda bu HAQIQIY qo'sh to'lovga olib kelardi), keyin faqat bittasi
+    // balansdan yechilardi — hamyon "bepul" pul yo'qotardi. Endi debit muvaffaqiyatsiz
+    // bo'lsa, provayderga umuman murojaat qilinmaydi; provayder xato bersa esa,
+    // band qilingan summa darhol qaytariladi (compensating credit).
+    const debit = await db.prepare('UPDATE wallets SET balance = balance - ? WHERE user_id = ? AND balance >= ?').run(amount, req.userId, amount);
+    if (debit.changes === 0) return res.status(400).json({ message: 'INSUFFICIENT_BALANCE' });
+
     const provider = getPaymentProvider();
     let payout;
     try {
       payout = await provider.createPayout({ userId: req.userId, amount, card: { num: recipient } });
     } catch (err) {
+      await db.prepare('UPDATE wallets SET balance = balance + ? WHERE user_id = ?').run(amount, req.userId);
       return res.status(400).json({ message: err.message });
     }
-    // Atomik, shart bilan yozish — tepadagi tekshiruv bilan bu yer orasidagi
-    // "race condition" balansni manfiyga tushirib qo'yishining oldini oladi.
-    const debit = await db.prepare('UPDATE wallets SET balance = balance - ? WHERE user_id = ? AND balance >= ?').run(amount, req.userId, amount);
-    if (debit.changes === 0) return res.status(409).json({ message: "Balans oxirgi lahzada o'zgardi, qaytadan urinib ko'ring" });
     const fresh = await db.prepare('SELECT balance FROM wallets WHERE user_id = ?').get(req.userId);
     const order = await nextSortOrder('wallet_transactions', req.userId);
     await db.prepare('INSERT INTO wallet_transactions (id, user_id, type, name, date, status, amount, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')

@@ -10,7 +10,15 @@ import { DATA_DIR, uid } from './db.js';
 export const UPLOADS_DIR = path.join(DATA_DIR, 'uploads');
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
+// Har bir ruxsat etilgan MIME turi FAQAT o'ziga mos kengaytmaga ega faylga
+// bog'langan. `file.mimetype` mijoz tomonidan yuboriladigan Content-Type
+// bo'lgani uchun ishonchsiz — uni FAQAT `file.originalname`dan olingan
+// kengaytma bilan bir vaqtda tekshirish shart, aks holda kimdir ".html"
+// faylni "image/jpeg" deb yolg'on Content-Type bilan yuborib, keyinchalik
+// admin uni ko'rib chiqqanda (res.sendFile orqali, to'g'ri Content-Type bilan
+// qaytariladi) admin brauzerida ishga tushadigan zararli sahifa yuklab
+// qo'yishi mumkin edi (saqlangan XSS, admin sessiyasiga qaratilgan).
+const ALLOWED = { 'image/jpeg': ['.jpg', '.jpeg'], 'image/png': ['.png'], 'application/pdf': ['.pdf'] };
 const MAX_SIZE = 5 * 1024 * 1024; // 5 MB
 
 const storage = multer.diskStorage({
@@ -25,7 +33,9 @@ export const uploadDocument = multer({
   storage,
   limits: { fileSize: MAX_SIZE },
   fileFilter: (req, file, cb) => {
-    if (!ALLOWED_TYPES.includes(file.mimetype)) return cb(new Error("Faqat JPG, PNG yoki PDF fayl qabul qilinadi"));
+    const allowedExts = ALLOWED[file.mimetype];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (!allowedExts || !allowedExts.includes(ext)) return cb(new Error("Faqat JPG, PNG yoki PDF fayl qabul qilinadi"));
     cb(null, true);
   },
 });

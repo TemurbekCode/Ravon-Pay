@@ -57,13 +57,15 @@ router.get('/verifications/:userId/document', ah(async (req, res) => {
 }));
 
 router.post('/verifications/:userId/approve', ah(async (req, res) => {
-  await db.prepare("UPDATE businesses SET verification_status = 'verified' WHERE user_id = ?").run(req.params.userId);
+  const result = await db.prepare("UPDATE businesses SET verification_status = 'verified' WHERE user_id = ?").run(req.params.userId);
+  if (result.changes === 0) return res.status(404).json({ message: 'Biznes topilmadi' });
   await addNotification(req.params.userId, 'Biznes tasdiqlandi', "STIR va yuridik ma'lumotlaringiz tasdiqlandi. Hisobingiz endi to'liq tekshirilgan.", 'system');
   res.json({ ok: true });
 }));
 
 router.post('/verifications/:userId/reject', ah(async (req, res) => {
-  await db.prepare("UPDATE businesses SET verification_status = 'none' WHERE user_id = ?").run(req.params.userId);
+  const result = await db.prepare("UPDATE businesses SET verification_status = 'none' WHERE user_id = ?").run(req.params.userId);
+  if (result.changes === 0) return res.status(404).json({ message: 'Biznes topilmadi' });
   await addNotification(req.params.userId, "Biznes ma'lumotlari rad etildi", "STIR yoki yuridik manzil noto'g'ri bo'lishi mumkin — Sozlamalar orqali qayta yuboring.", 'system');
   res.json({ ok: true });
 }));

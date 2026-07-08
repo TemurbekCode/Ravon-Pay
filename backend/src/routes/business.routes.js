@@ -212,8 +212,13 @@ router.get('/team', ah(async (req, res) => {
   res.json({ team: (await getBusiness(req.userId)).team });
 }));
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 router.post('/team', ah(async (req, res) => {
   const { email, role } = req.body || {};
+  if (typeof email !== 'string' || !EMAIL_RE.test(email)) {
+    return res.status(400).json({ message: "Email noto'g'ri" });
+  }
   const countRow = await db.prepare('SELECT COUNT(*) AS c FROM biz_team WHERE user_id = ?').get(req.userId);
   const member = {
     id: uid('tm'),

@@ -28,6 +28,26 @@ const bruteForceLimiter = process.env.DISABLE_RATE_LIMIT === 'true'
 const OTP_TTL_MS = 5 * 60 * 1000;
 const MAX_OTP_ATTEMPTS = 5;
 
+// otp/request'dagi telefon so'rovdan to'g'ridan-to'g'ri (hali autentifikatsiyasiz)
+// keladi — shuning uchun yuqoridagi bruteForceLimiter (IP bo'yicha) yetarli emas:
+// turli IP'lardan (masalan bot tarmog'i) BOSHQA birovning haqiqiy raqamiga
+// cheksiz SMS yuborilishi mumkin edi ("SMS-bombing" — tashvish va SMS xarajati
+// uchun suiiste'mol). Shu telefon raqamining o'ziga, IP'dan mustaqil chegara.
+const otpPhoneAttempts = new Map(); // cleanPhone -> { count, resetAt }
+const OTP_PHONE_WINDOW_MS = 15 * 60 * 1000;
+const OTP_PHONE_MAX = 5;
+
+function isPhoneRateLimited(phone) {
+  const now = Date.now();
+  const entry = otpPhoneAttempts.get(phone);
+  if (!entry || entry.resetAt < now) {
+    otpPhoneAttempts.set(phone, { count: 1, resetAt: now + OTP_PHONE_WINDOW_MS });
+    return false;
+  }
+  entry.count += 1;
+  return entry.count > OTP_PHONE_MAX;
+}
+
 function serializeUser(row) {
   const profiles = JSON.parse(row.profiles);
   return {
@@ -63,6 +83,9 @@ router.post('/otp/request', bruteForceLimiter, ah(async (req, res) => {
   }
   if (mode === 'login' && !existing) {
     return res.status(404).json({ message: "Bu telefon raqami bilan hisob topilmadi, ro'yxatdan o'ting" });
+  }
+  if (process.env.DISABLE_RATE_LIMIT !== 'true' && isPhoneRateLimited(cleanPhone)) {
+    return res.status(429).json({ message: "Bu raqamga juda ko'p SMS yuborildi, birozdan keyin qayta urinib ko'ring" });
   }
 
   const code = generateOtpCode();

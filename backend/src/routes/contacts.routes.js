@@ -15,6 +15,12 @@ router.get('/', ah(async (req, res) => {
 
 router.post('/', ah(async (req, res) => {
   const { name, phone } = req.body || {};
+  if (typeof name !== 'string' || !name.trim() || name.length > 100) {
+    return res.status(400).json({ message: "Ism noto'g'ri" });
+  }
+  if (typeof phone !== 'string' || !phone.trim() || phone.length > 30) {
+    return res.status(400).json({ message: "Telefon raqami noto'g'ri" });
+  }
   const count = (await getWallet(req.userId)).contacts.length;
   const contact = {
     id: uid('c'),

@@ -45,29 +45,24 @@ router.post('/withdraw', ah(async (req, res) => {
   }
   const card = await db.prepare('SELECT * FROM cards WHERE id = ? AND user_id = ?').get(req.body?.cardId, req.userId);
   if (!card) return res.status(400).json({ message: 'Karta topilmadi' });
-  const w = await db.prepare('SELECT balance FROM wallets WHERE user_id = ?').get(req.userId);
-  if (amount > w.balance) return res.status(400).json({ message: 'INSUFFICIENT_BALANCE' });
+
+  // Avval balansni atomik, shart bilan yechib (band qilib) qo'yamiz, FAQAT
+  // shundan keyin tashqi provayderga chiqim so'rovini yuboramiz. Ilgari tartib
+  // teskari edi (avval provider.createPayout, keyin debit) — shu holda ikkita
+  // bir vaqtdagi so'rov ikkalasi ham tashqi to'lovni "muvaffaqiyatli" deb
+  // topib, keyin faqat bittasi balansdan yechilishi mumkin edi (haqiqiy
+  // provayder ulanganda hamyon uchun "bepul" pul yo'qotish bo'lardi).
+  const debit = await db.prepare('UPDATE wallets SET balance = balance - ? WHERE user_id = ? AND balance >= ?').run(amount, req.userId, amount);
+  if (debit.changes === 0) return res.status(400).json({ message: 'INSUFFICIENT_BALANCE' });
 
   const provider = getPaymentProvider();
   let payout;
   try {
     payout = await provider.createPayout({ userId: req.userId, amount, card });
   } catch (err) {
+    // Provayder xato berdi — band qilingan summa darhol qaytariladi (compensating credit).
+    await db.prepare('UPDATE wallets SET balance = balance + ? WHERE user_id = ?').run(amount, req.userId);
     return res.status(400).json({ message: err.message });
-  }
-
-  // Yuqoridagi tekshiruv (SELECT) bilan bu yerdagi yozish orasida boshqa
-  // so'rov ham balansni kamaytirgan bo'lishi mumkin — shuning uchun yakuniy
-  // yechish HAM shart bo'lgan balansni o'zi ichida tekshiradigan, atomik
-  // buyruq orqali amalga oshiriladi (bir vaqtda kelgan ikkita so'rov balansni
-  // manfiyga tushirib qo'yishining oldini oladi).
-  const debit = await db.prepare('UPDATE wallets SET balance = balance - ? WHERE user_id = ? AND balance >= ?').run(amount, req.userId, amount);
-  if (debit.changes === 0) {
-    // Payout provayderi (hozircha Mock) allaqachon "muvaffaqiyatli" javob bergan,
-    // lekin balans oxirgi lahzada yetarli bo'lmay qoldi — juda kam uchraydigan holat,
-    // haqiqiy provayder ulanganda bu qo'llab-quvvatlash/solishtirish (reconciliation)
-    // talab qilishi mumkin.
-    return res.status(409).json({ message: "Balans oxirgi lahzada o'zgardi, qaytadan urinib ko'ring" });
   }
   const fresh = await db.prepare('SELECT balance FROM wallets WHERE user_id = ?').get(req.userId);
   const order = await nextSortOrder('wallet_transactions', req.userId);

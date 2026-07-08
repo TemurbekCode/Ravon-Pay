@@ -100,10 +100,12 @@ export async function creditWallet(userId, amount, label = "Hamyon to'ldirildi")
 // o'rnatiladi, shuning uchun Bosh sahifadagi "+X% bu oy" chipi haqiqiy,
 // hisoblangan qiymat bo'ladi (ilgari doim qattiq yozilgan "+12.5%" edi).
 async function rolloverWalletBaseline(userId) {
-  const w = await db.prepare('SELECT balance, baseline_month FROM wallets WHERE user_id = ?').get(userId);
+  // Bitta atomik UPDATE — `balance`ning UPDATE paytidagi haqiqiy qiymatini
+  // o'zi ichida o'qiydi, shuning uchun oldingi SELECT-keyin-UPDATE naqshidagi
+  // kabi orada boshqa so'rov balansni o'zgartirib ulgurishi (va baseline eskirgan
+  // qiymat bilan yozilishi) mumkin emas.
   const currentMonth = new Date().toISOString().slice(0, 7);
-  if (w.baseline_month === currentMonth) return;
-  await db.prepare('UPDATE wallets SET baseline_balance = ?, baseline_month = ? WHERE user_id = ?').run(w.balance, currentMonth, userId);
+  await db.prepare('UPDATE wallets SET baseline_balance = balance, baseline_month = ? WHERE user_id = ? AND baseline_month != ?').run(currentMonth, userId, currentMonth);
 }
 
 export async function getWallet(userId) {
@@ -127,11 +129,13 @@ export async function getWallet(userId) {
 // shuning uchun alohida cron/schedule kerak emas — oy almashgani birinchi
 // so'rovda avtomatik payqaladi.
 async function rolloverMonthlyBaseline(userId) {
-  const b = await db.prepare('SELECT revenue, sales_count, avg_order, baseline_month FROM businesses WHERE user_id = ?').get(userId);
+  // Bitta atomik UPDATE — joriy revenue/sales_count/avg_order'ni o'zi ichida
+  // o'qiydi, shuning uchun SELECT-keyin-UPDATE oralig'ida boshqa so'rov shu
+  // qiymatlarni o'zgartirib ulgurishi (va baseline eskirgan holatda qolishi) mumkin emas.
   const currentMonth = new Date().toISOString().slice(0, 7); // "2026-07"
-  if (b.baseline_month === currentMonth) return;
-  await db.prepare('UPDATE businesses SET baseline_revenue = ?, baseline_sales_count = ?, baseline_avg_order = ?, baseline_month = ? WHERE user_id = ?')
-    .run(b.revenue, b.sales_count, b.avg_order, currentMonth, userId);
+  await db.prepare(`UPDATE businesses SET baseline_revenue = revenue, baseline_sales_count = sales_count,
+    baseline_avg_order = avg_order, baseline_month = ? WHERE user_id = ? AND baseline_month != ?`)
+    .run(currentMonth, userId, currentMonth);
 }
 
 export async function getBusiness(userId) {
