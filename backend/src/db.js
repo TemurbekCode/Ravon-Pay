@@ -392,6 +392,7 @@ for (const col of ['subscription_active INTEGER DEFAULT 0', 'subscription_plan T
 }
 await ensureColumn('cards', "holder TEXT DEFAULT ''");
 await ensureColumn('users', 'two_fa_enabled INTEGER DEFAULT 0');
+await ensureColumn('users', 'blocked INTEGER DEFAULT 0');
 await ensureColumn('wallets', 'baseline_balance INTEGER NOT NULL DEFAULT 0');
 await ensureColumn('wallets', "baseline_month TEXT NOT NULL DEFAULT ''");
 

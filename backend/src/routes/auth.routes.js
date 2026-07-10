@@ -135,6 +135,7 @@ router.post('/otp/verify', bruteForceLimiter, ah(async (req, res) => {
     // qo'yish qo'shimcha, muqobil yo'l beradi.
     await addNotification(userId, 'Emailingizni qo\'shing', "Siz faqat telefon raqami bilan ro'yxatdan o'tdingiz. Hisobingizga kirishning qo'shimcha yo'li bo'lishi uchun hozir email qo'shib qo'ying — Sozlamalar bo'limidan istalgan vaqtda qo'shishingiz mumkin.", 'email_reminder');
   }
+  if (row.blocked) return res.status(403).json({ message: "Hisobingiz bloklangan. Qo'llab-quvvatlash xizmatiga murojaat qiling." });
 
   const tokens = await issueTokens(row.id);
   res.json({ ...tokens, user: serializeUser(row) });
@@ -178,6 +179,7 @@ router.post('/google', bruteForceLimiter, ah(async (req, res) => {
     await seedEmptyWalletAndBusiness(userId, profile.name || 'Google User', email);
     row = await db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
   }
+  if (row.blocked) return res.status(403).json({ message: "Hisobingiz bloklangan. Qo'llab-quvvatlash xizmatiga murojaat qiling." });
   const tokens = await issueTokens(row.id);
   res.json({ ...tokens, user: serializeUser(row) });
 }));

@@ -41,4 +41,49 @@ export const adminService = {
       throw err;
     }
   },
+
+  listUsers: async (search = '') => {
+    try {
+      return await apiClient.get('/admin/users', { params: search ? { search } : {} });
+    } catch (err) {
+      if (isNetworkError(err)) return { users: [] };
+      throw err;
+    }
+  },
+
+  getUser: async (userId) => {
+    try {
+      return await apiClient.get(`/admin/users/${userId}`);
+    } catch (err) {
+      if (isNetworkError(err)) return { user: null, wallet: { balance: 0, transactions: [] }, business: null, businessTransactions: [] };
+      throw err;
+    }
+  },
+
+  blockUser: async (userId) => {
+    try {
+      return await apiClient.post(`/admin/users/${userId}/block`);
+    } catch (err) {
+      if (isNetworkError(err)) return { ok: true };
+      throw err;
+    }
+  },
+
+  unblockUser: async (userId) => {
+    try {
+      return await apiClient.post(`/admin/users/${userId}/unblock`);
+    } catch (err) {
+      if (isNetworkError(err)) return { ok: true };
+      throw err;
+    }
+  },
+
+  listTransactions: async () => {
+    try {
+      return await apiClient.get('/admin/transactions');
+    } catch (err) {
+      if (isNetworkError(err)) return { transactions: [] };
+      throw err;
+    }
+  },
 };
