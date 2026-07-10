@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth.js';
+import { useReveal } from '../../hooks/useReveal.js';
 import { adminService } from '../../services/adminService.js';
 import { apiClient } from '../../services/apiClient.js';
 import { ROUTES } from '../../utils/constants.js';
@@ -17,6 +18,8 @@ export default function AdminDashboard() {
   const [verifications, setVerifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState('');
+
+  useReveal([]);
 
   const reload = async () => {
     const [ov, vr] = await Promise.all([adminService.getOverview(), adminService.listVerifications()]);
