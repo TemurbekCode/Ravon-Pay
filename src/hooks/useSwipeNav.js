@@ -1,5 +1,5 @@
 import { useCallback, useRef } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 // Instagram-uslubidagi "sahifalar orasida yon tomonga surish" — `stops` ro'yxatida
 // ketma-ket bekatlar beriladi ({ route } yoki { modal: true }, masalan "Sozlamalar"
@@ -14,10 +14,7 @@ const DIRECTION_RATIO = 1.4;
 
 export function useSwipeNav(stops, onOpenModal) {
   const navigate = useNavigate();
-  const { pathname } = useLocation();
   const start = useRef(null);
-
-  const activeIndex = stops.findIndex((s) => s.route === pathname);
 
   const onTouchStart = useCallback((e) => {
     // Ichida o'zining gorizontal scroll'i bor elementlar (jadval, input) ustida
@@ -28,7 +25,15 @@ export function useSwipeNav(stops, onOpenModal) {
   }, []);
 
   const onTouchEnd = useCallback((e) => {
-    if (!start.current || activeIndex === -1) { start.current = null; return; }
+    if (!start.current) return;
+    // React'ning useLocation() holati o'rniga BEVOSITA window.location'dan
+    // o'qiladi — chunki navigate() history.pushState'ni SINXRON chaqiradi,
+    // window.location darhol yangilanadi, React esa qayta render qilib,
+    // shu hook'ning yopilishini (closure) yangilashi bir zumga kechikishi
+    // mumkin. Shu tezkor oyna ichida ketma-ket kelgan ikkinchi surish
+    // ESKI sahifadan hisoblangan (noto'g'ri) bekatga o'tkazib yuborishi mumkin edi.
+    const activeIndex = stops.findIndex((s) => s.route === window.location.pathname);
+    if (activeIndex === -1) { start.current = null; return; }
     const t = e.changedTouches[0];
     const dx = t.clientX - start.current.x;
     const dy = t.clientY - start.current.y;
@@ -39,7 +44,7 @@ export function useSwipeNav(stops, onOpenModal) {
     if (!target) return;
     if (target.modal) onOpenModal?.();
     else navigate(target.route);
-  }, [activeIndex, stops, navigate, onOpenModal]);
+  }, [stops, navigate, onOpenModal]);
 
   return { onTouchStart, onTouchEnd };
 }
