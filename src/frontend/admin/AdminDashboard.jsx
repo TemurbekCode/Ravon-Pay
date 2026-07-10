@@ -56,9 +56,9 @@ export default function AdminDashboard() {
   return (
     <div className="admin-shell">
       <header className="admin-header">
-        <div className="admin-header-title">RavonPay — Admin</div>
+        <div className="admin-header-title">Admin</div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button className="btn-ghost" onClick={() => navigate(ROUTES.dashboard)}>Ilovaga qaytish</button>
+          <button className="btn-ghost" onClick={() => navigate(ROUTES.dashboard)}>Qaytish</button>
           <button className="btn-ghost" onClick={handleLogout}>Chiqish</button>
         </div>
       </header>
