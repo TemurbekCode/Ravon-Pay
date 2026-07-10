@@ -12,8 +12,12 @@ const EMPTY_CARD = { cardNumber: '', expiry: '', cvv: '', cardholderName: '', ca
 // tekshiriladi) — haqiqiy to'lov provayderi ulanmagani uchun undirish simulyatsiya
 // qilinadi, lekin karta doim tekshiriladi va foydalanuvchining kartalari ro'yxatiga qo'shiladi.
 export default function UpgradeProModal({ show, onClose, onSubscribe, onBack, mandatory, currentPlan, cards, t }) {
+  const availableCards = (cards || []).filter((c) => !c.frozen);
   const [plan, setPlan] = useState(currentPlan || 'monthly');
-  const [selectedCard, setSelectedCard] = useState('new');
+  // Foydalanuvchida allaqachon (muzlatilmagan) karta bo'lsa, shu kartani oldindan
+  // tanlab qo'yamiz — aks holda u ro'yxatdan o'tishda bir marta kiritgan karta
+  // ma'lumotlarini shu yerda YANA qo'lda kiritishga majbur bo'lardi.
+  const [selectedCard, setSelectedCard] = useState(() => (availableCards.length ? availableCards[0].id : 'new'));
   const [cardForm, setCardForm] = useState(EMPTY_CARD);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -61,7 +65,7 @@ export default function UpgradeProModal({ show, onClose, onSubscribe, onBack, ma
             <div className="plan-price">{t('sub.priceYearly')}</div>
           </button>
         </div>
-        <CardPicker cards={(cards || []).filter((c) => !c.frozen)} selected={selectedCard} onSelect={setSelectedCard} cardForm={cardForm} onCardFormChange={setCardForm} t={t} />
+        <CardPicker cards={availableCards} selected={selectedCard} onSelect={setSelectedCard} cardForm={cardForm} onCardFormChange={setCardForm} t={t} />
         {error && <div className="pw-msg">{error}</div>}
         <button type="button" className="btn-new" style={{ width: '100%', justifyContent: 'center' }} onClick={handlePay} disabled={busy || !isCardPickerValid(selectedCard, cardForm)}>
           {busy ? '...' : t('pro.btn')}
