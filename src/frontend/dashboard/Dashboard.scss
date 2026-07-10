@@ -623,7 +623,9 @@
     justify-content: space-around;
     align-items: center;
     position: fixed;
-    bottom: 14px; left: 14px; right: 14px;
+    bottom: 18px; left: 28px; right: 28px;
+    max-width: 360px;
+    margin: 0 auto;
     z-index: 60;
     background: var(--bg-glass);
     backdrop-filter: blur(20px);
@@ -631,7 +633,7 @@
     border: 1px solid var(--border);
     border-radius: var(--radius-full);
     box-shadow: var(--shadow-card);
-    padding: 8px 6px;
+    padding: 8px 10px;
   }
   .bn-item {
     display: flex;
