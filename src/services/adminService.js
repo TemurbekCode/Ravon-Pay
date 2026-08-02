@@ -78,6 +78,15 @@ export const adminService = {
     }
   },
 
+  deleteUser: async (userId) => {
+    try {
+      return await apiClient.delete(`/admin/users/${userId}`);
+    } catch (err) {
+      if (isNetworkError(err)) return { ok: true };
+      throw err;
+    }
+  },
+
   listTransactions: async () => {
     try {
       return await apiClient.get('/admin/transactions');

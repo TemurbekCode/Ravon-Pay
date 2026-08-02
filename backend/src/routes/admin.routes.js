@@ -126,6 +126,17 @@ router.post('/users/:userId/unblock', ah(async (req, res) => {
   res.json({ ok: true });
 }));
 
+// Hisobni BUTUNLAY o'chiradi — qaytarib bo'lmaydigan amal. Barcha bog'liq
+// jadvallar (wallets, cards, tranzaksiyalar, businesses, va h.k.) `users(id)
+// ON DELETE CASCADE` orqali avtomatik o'chadi, alohida so'rovlar shart emas.
+router.delete('/users/:userId', ah(async (req, res) => {
+  const target = await db.prepare('SELECT role FROM users WHERE id = ?').get(req.params.userId);
+  if (!target) return res.status(404).json({ message: 'Foydalanuvchi topilmadi' });
+  if (target.role === 'admin') return res.status(400).json({ message: "Admin hisobni o'chirib bo'lmaydi" });
+  await db.prepare('DELETE FROM users WHERE id = ?').run(req.params.userId);
+  res.json({ ok: true });
+}));
+
 // Butun platforma bo'ylab (hamma foydalanuvchilarning shaxsiy + biznes)
 // so'nggi operatsiyalari — audit/kuzatuv uchun.
 router.get('/transactions', ah(async (req, res) => {

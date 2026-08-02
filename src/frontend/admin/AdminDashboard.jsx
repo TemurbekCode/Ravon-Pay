@@ -28,6 +28,7 @@ export default function AdminDashboard() {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState(null);
   const [userBusy, setUserBusy] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const [transactions, setTransactions] = useState([]);
   const [txLoaded, setTxLoaded] = useState(false);
@@ -64,7 +65,8 @@ export default function AdminDashboard() {
 
   const handleSearch = (e) => { e.preventDefault(); loadUsers(search); };
 
-  const openUser = async (userId) => setSelected(await adminService.getUser(userId));
+  const openUser = async (userId) => { setConfirmDelete(false); setSelected(await adminService.getUser(userId)); };
+  const closeUser = () => { setConfirmDelete(false); setSelected(null); };
 
   const toggleBlock = async (user) => {
     setUserBusy(true);
@@ -72,6 +74,18 @@ export default function AdminDashboard() {
       if (user.blocked) await adminService.unblockUser(user.id);
       else await adminService.blockUser(user.id);
       setSelected(await adminService.getUser(user.id));
+      loadUsers(search);
+    } finally {
+      setUserBusy(false);
+    }
+  };
+
+  const deleteAccount = async (userId) => {
+    setUserBusy(true);
+    try {
+      await adminService.deleteUser(userId);
+      setSelected(null);
+      setConfirmDelete(false);
       loadUsers(search);
     } finally {
       setUserBusy(false);
@@ -229,11 +243,11 @@ export default function AdminDashboard() {
       </div>
 
       {selected?.user && (
-        <div className="modal-overlay show" onClick={(e) => { if (e.target === e.currentTarget) setSelected(null); }}>
+        <div className="modal-overlay show" onClick={(e) => { if (e.target === e.currentTarget) closeUser(); }}>
           <div className="modal">
             <div className="modal-head">
               <h3>{selected.user.fullName}</h3>
-              <button className="modal-close" onClick={() => setSelected(null)}>
+              <button className="modal-close" onClick={closeUser}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18M6 6l12 12" /></svg>
               </button>
             </div>
@@ -249,14 +263,31 @@ export default function AdminDashboard() {
               )}
             </div>
 
-            <button
-              className={selected.user.blocked ? 'btn-new' : 'btn-ghost'}
-              disabled={userBusy || selected.user.role === 'admin'}
-              onClick={() => toggleBlock(selected.user)}
-              style={{ marginBottom: 20 }}
-            >
-              {selected.user.blocked ? 'Blokdan chiqarish' : 'Bloklash'}
-            </button>
+            <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+              <button
+                className={selected.user.blocked ? 'btn-new' : 'btn-ghost'}
+                disabled={userBusy || selected.user.role === 'admin'}
+                onClick={() => toggleBlock(selected.user)}
+                style={{ flex: 1 }}
+              >
+                {selected.user.blocked ? 'Blokdan chiqarish' : 'Bloklash'}
+              </button>
+              {selected.user.role !== 'admin' && !confirmDelete && (
+                <button className="btn-danger" style={{ flex: 1 }} disabled={userBusy} onClick={() => setConfirmDelete(true)}>
+                  Hisobni o'chirish
+                </button>
+              )}
+            </div>
+
+            {confirmDelete && (
+              <div className="delete-confirm" style={{ marginBottom: 20 }}>
+                <p>Bu hisob va unga tegishli barcha ma'lumotlar (hamyon, kartalar, tranzaksiyalar) butunlay o'chiriladi. Bu amalni ortga qaytarib bo'lmaydi.</p>
+                <div className="delete-actions">
+                  <button className="btn-ghost" disabled={userBusy} onClick={() => setConfirmDelete(false)}>Bekor qilish</button>
+                  <button className="btn-danger" disabled={userBusy} onClick={() => deleteAccount(selected.user.id)}>Ha, o'chirish</button>
+                </div>
+              </div>
+            )}
 
             <h4 style={{ marginBottom: 10 }}>Oxirgi operatsiyalar</h4>
             {[...selected.wallet.transactions, ...selected.businessTransactions].length === 0 ? (
