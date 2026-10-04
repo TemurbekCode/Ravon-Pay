@@ -1,154 +1,239 @@
-# 🌊 Ravon Pay
+# RavonPay
 
-> **The simplest way for Central Asian freelancers, dropshippers, and remote workers to receive international payments.**
+**The simplest way for Central Asian freelancers, dropshippers, and remote workers to receive international payments.**
 
 [![Status](https://img.shields.io/badge/status-in%20development-blue)](https://github.com)
 [![Region](https://img.shields.io/badge/region-Central%20Asia-green)](https://github.com)
-[![Language](https://img.shields.io/badge/lang-UZ%20%7C%20EN-orange)](https://github.com)
+[![Language](https://img.shields.io/badge/lang-EN%20%7C%20UZ-orange)](https://github.com)
 
 ---
 
-## 🇺🇿 Nima bu? / What is this?
+## What is RavonPay?
 
-**Ravon Pay** — O'rta Osiyo uchun yaratilgan AI-powered payment adviser platform.
+RavonPay is a fintech platform designed to solve international payment challenges for Central Asian freelancers, dropshippers, and remote workers.
 
-Maqsad: O'zbek frilanserlar, dropshipperlar va masofadan ishlovchilar xalqaro to'lovlarni qabul qilishda duch keladigan muammolarni eng oddiy yo'l bilan yechish.
-
-**The goal:** Solve the international payment problem for Uzbek freelancers, dropshippers, and remote workers — without the confusion of PayPal, Payoneer, or Wise.
+The goal is to help users find the easiest, most practical payment route without dealing with confusing or unreliable international payment systems.
 
 ---
 
-## 🚀 Muammo / The Problem
+## The Problem
 
-- ❌ PayPal O'zbekistonda to'liq ishlamaydi
-- ❌ Payoneer murakkab va chalkash
-- ❌ Swift — qimmat va sekin
-- ❌ Hech qaysi platforma O'zbek tilida yo'q
-- ❌ Oddiy odam qaysi usulni tanlashni bilmaydi
-
----
-
-## ✅ Yechim / The Solution
-
-**Ravon Pay** uchta asosiy narsa qiladi:
-
-1. **AI Maslahatchi** — Foydalanuvchi bir nechta savollarga javob beradi, AI eng yaxshi to'lov usulini tavsiya qiladi
-2. **Qadam-baqadam yo'riqnoma** — Har bir usul uchun oddiy, rasmli yo'riqnoma
-3. **Bir joyda ma'lumot** — Payoneer, Wise, Skrill va boshqalar haqida O'zbek tilida to'liq ma'lumot
+- PayPal does not work reliably in Central Asia
+- Payoneer is confusing and difficult for many users
+- SWIFT is expensive and slow
+- Many users do not understand which payment method is best for their situation
+- There is limited guidance in local languages
 
 ---
 
-## 👥 Kimlar uchun / Who is it for?
+## The Solution
 
-| Foydalanuvchi | Platforma |
-|--------------|-----------|
-| 💻 Frilanserlar | Upwork, Fiverr, To'g'ridan |
-| 📦 Dropshipperlar | Amazon, Shopify, eBay |
-| 🌍 Masofadan ishlovchilar | Xorijiy kompaniyalar |
-| 🎮 Kontent yaratuvchilar | YouTube, Twitch, Patreon |
-| 📱 App Developerlar | App Store, Google Play |
-| 🎓 Online o'qituvchilar | Udemy, Teachable |
-| 🏢 Kichik bizneslar | B2B, Xalqaro mijozlar |
+RavonPay focuses on three core things:
+
+1. **AI Payment Adviser** — Users answer a few questions and receive a recommendation on the best payment option
+2. **Step-by-Step Guides** — Clear instructions for each payment method
+3. **Centralized Information** — Trusted, easy-to-understand information about international payment tools
 
 ---
 
-## 🗺️ Yo'l xaritasi / Roadmap
+## Who Is It For?
 
-### Bosqich 1 — MVP (Hozir)
-- [x] Landing page (UZ + EN)
-- [ ] AI Payment Adviser tool
-- [ ] Payoneer yo'riqnomasi
-- [ ] Wise yo'riqnomasi
-- [ ] Skrill yo'riqnomasi
-
-### Bosqich 2 — Kengaytirish
-- [ ] Foydalanuvchi hisob qaydnomasi
-- [ ] To'lov tarixini kuzatish
-- [ ] Qozog'iston va Qirg'iziston bozori
-- [ ] Mobile ilova
-
-### Bosqich 3 — Full Platform (18+ yosh)
-- [ ] Bank hamkorlik (Markaziy bank litsenziyasi)
-- [ ] To'liq O'rta Osiyo payment platformasi
-- [ ] O'zbekiston, Qozog'iston, Qirg'iziston, Tojikiston
+| User Type | Use Case |
+|-----------|----------|
+| 💻 Freelancers | Upwork, Fiverr, direct international clients |
+| 📦 Dropshippers | Amazon, Shopify, eBay |
+| 🌍 Remote Workers | International employers |
+| 🎮 Content Creators | YouTube, Twitch, Patreon |
+| 📱 App Developers | App Store, Google Play |
+| 🎓 Online Educators | Udemy, Teachable |
+| 🏢 Small Businesses | B2B and international clients |
 
 ---
 
-## 🛠️ Texnologiyalar / Tech Stack
+## Tech Stack
 
-```
-Frontend:    React + Vite (src/)
-Backend:     Node.js + Express + libSQL (backend/)
-To'lovlar:   Payme/Click/Payoneer integratsiyaga tayyor abstraktsiya (backend/src/payments/)
-Hosting:     Frontend — Netlify. Backend — Render (yoki Railway/Fly.io) + Turso (bulut bazasi)
-```
+### Frontend
+- React + Vite
+- SCSS
+- Axios
+- React Router
 
----
+### Backend
+- Node.js + Express
+- libSQL (Turso)
+- JWT for authentication
+- bcryptjs for password hashing
+- Helmet for security headers
+- Rate limiting for API protection
 
-## 🚀 Hosting / Deployment
-
-**Frontend (Netlify):** statik build — `npm run build`, natija `dist/` papkasi. Netlify'da
-`Build command: npm run build`, `Publish directory: dist`. `.env`da `VITE_API_URL`ni
-backend manzilingizga (masalan `https://ravonpay-backend.onrender.com/api/v1`) qo'ying.
-
-**Backend (Render + Turso):** Netlify Functions statik/vaqtinchalik bo'lgani uchun
-backend uchun mos emas (`backend/data/ravonpay.db` doimiy fayl talab qiladi). O'rniga:
-1. [turso.tech](https://turso.tech)da bepul hisob oching, baza yarating (`turso db create ravonpay`)
-2. `turso db show ravonpay --url` va `turso db tokens create ravonpay` orqali
-   `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN` oling
-3. Render'da "New Web Service" → shu repo → Root Directory: `backend` → 
-   Build: `npm install` → Start: `node server.js`
-4. Render'ning Environment bo'limiga `backend/.env.example`dagi barcha qiymatlarni
-   (jumladan `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN`) qo'shing — disk qo'shish shart emas,
-   Render'ning BEPUL tarifida ham ishlayveradi.
-
-To'lov provayderlari (Payme/Click/Payoneer) bilan ishlash bo'yicha — `TOLOV_HAMKORLIKLARI.md` fayliga qarang.
+### Deployment
+- Frontend: Netlify
+- Backend: Render or Railway
+- Database: Turso
 
 ---
 
-## 📁 Loyiha tuzilmasi / Project Structure
+## Project Structure
 
-```
+```text
 ravon-pay/
-├── index.html          # Bosh sahifa / Home page
-├── about.html          # Biz haqimizda / About
-├── contact.html        # Aloqa / Contact
-├── privacy.html        # Maxfiylik siyosati
-├── terms.html          # Foydalanish shartlari
-├── assets/
-│   ├── css/
-│   ├── js/
-│   └── images/
-└── README.md
+├── index.html
+├── src/
+│   ├── pages/
+│   ├── components/
+│   ├── services/
+│   ├── utils/
+│   └── App.jsx
+├── backend/
+│   ├── server.js
+│   ├── src/
+│   │   ├── db.js
+│   │   ├── routes/
+│   │   ├── middleware/
+│   │   └── services/
+│   └── package.json
+├── package.json
+├── vite.config.js
+├── README.md
+└── LICENSE
 ```
 
 ---
 
-## 🌍 Qo'llab-quvvatlanadigan hududlar / Supported Regions
+## Security Note
 
-- 🇺🇿 O'zbekiston *(asosiy bozor / primary market)*
-- 🇰🇿 Qozog'iston
-- 🇰🇬 Qirg'iziston
-- 🇹🇯 Tojikiston
+⚠️ This project is an early-stage fintech product and is not production-ready for live financial operations.
+
+Before real-world deployment, the following must be addressed:
+
+- HTTPS everywhere
+- Proper backend validation for all transactions
+- Payment processing through a trusted provider
+- PCI compliance for any card handling
+- Strong authentication and authorization
+- Rate limiting and monitoring
+- KYC / AML review where required
+- Audit logs for transactions and user actions
+- Secure storage for sensitive data
+- Regulatory review for each target region
+
+This project is a product prototype and concept platform, not a complete production payment system by itself.
 
 ---
 
-## 📬 Aloqa / Contact
+## Roadmap
 
-Savol yoki taklif bo'lsa:
+### Phase 1 — MVP
+- [x] Landing page (EN + UZ)
+- [ ] AI Payment Adviser tool
+- [ ] Payoneer guide
+- [ ] Wise guide
+- [ ] Skrill guide
 
-- 📧 Email: `hello@ravonpay.com` *(tez orada)*
-- 📱 Telegram: `@ravonpay` *(tez orada)*
+### Phase 2 — Expansion
+- [ ] User accounts and dashboard
+- [ ] Transaction history
+- [ ] Kazakhstan and Kyrgyzstan support
+- [ ] Mobile app
+
+### Phase 3 — Full Platform
+- [ ] Banking partnerships
+- [ ] Full Central Asian payment platform
+- [ ] Uzbekistan, Kazakhstan, Kyrgyzstan, Tajikistan support
+- [ ] Regulatory compliance and licensing
 
 ---
 
-## 📄 Litsenziya / License
+## Installation
 
-MIT License — bepul foydalanishingiz mumkin.
+### Frontend
+
+```bash
+npm install
+npm run dev
+```
+
+### Backend
+
+```bash
+cd backend
+npm install
+npm start
+```
+
+The backend runs at:
+
+```text
+http://localhost:4000/api/v1
+```
+
+---
+
+## Environment Variables
+
+Create a `.env` file in the backend and add your required configuration:
+
+```env
+TURSO_DATABASE_URL=libsql://...
+TURSO_AUTH_TOKEN=...
+JWT_SECRET=your-secret-key
+```
+
+---
+
+## Deployment
+
+### Frontend (Netlify)
+
+```bash
+npm run build
+```
+
+Deploy the generated `dist/` folder to Netlify.
+
+### Backend (Render / Railway)
+
+1. Push the `backend/` folder to GitHub
+2. Create a new web service on Render or Railway
+3. Set environment variables from `.env.example`
+4. Start with `npm start`
+
+---
+
+## Demo Account
+
+A demo CEO account is created automatically in the backend for testing.
+
+- Email: `ceo@ravonpay.uz`
+- Password: any password for demo access
+
+This is intended for development and demo purposes only.
+
+---
+
+## Contributing
+
+RavonPay is a proprietary project and is not open for external contributions at this stage.
+
+---
+
+## License
+
+**Proprietary License** — All rights reserved.
+
+This repository is for internal product development and demonstration purposes only.
+
+---
+
+## Contact
+
+- Email: hello@ravonpay.com
+- GitHub: [@TemurbekCode](https://github.com/TemurbekCode)
 
 ---
 
 <p align="center">
-  🌊 <strong>Ravon Pay</strong> — Xalqaro to'lovlar, oddiy qilib.
+  🌊 <strong>RavonPay</strong> — International payments, simplified.
   <br>
-  <em>International payments,
+  <em>Making fintech accessible for Central Asia</em>
+</p>
